@@ -42,6 +42,10 @@ def CallSpecKwargs(self, spec: _CallSpecWrapper) -> list[_CallKwarg]:
         (),
     )
 
+    # We can't call `inspect.signature` on `spec` directly --
+    # signature() will attempt to resolve annotations and fail.
+    # So we run it on a copy of the function that doesn't have
+    # annotations set.
     sig = inspect.signature(ff)
     bound = sig.bind(*spec._args, **spec._kwargs)
 
