@@ -44,13 +44,62 @@ class _EvalProxy:
 
 @dataclasses.dataclass
 class EvalContext:
-    seen: dict[Any, Any]
-    # The typing.Any is really a types.FunctionType, but mypy gets
-    # confused and wants to treat it as a MethodType.
-    current_alias_stack: set[types.GenericAlias | typing.Any] = (
+    # Fully resolved types
+    resolved: dict[Any, Any] = dataclasses.field(default_factory=dict)
+    # Types that have been seen, but may not be fully resolved
+    seen: dict[Any, Any] = dataclasses.field(default_factory=dict)
+
+    # We want to resolve recursive type aliases correctly, but not have
+    # haphazardly expanded results which vary based on order of evaluation,
+    # nesting, etc.
+    #
+    # To produce consistent results, we leave recursive type aliases unexpanded,
+    # unless they are the final result.
+    #
+    # For example, given A = int|list[A],
+    #   A expands to int|list[A]
+    #   list[A] remains as list[A]
+    #
+    # IMPLEMENTATION
+    #
+    # To achieve this behavior, we resolve recursive type aliases in a way that
+    # prevents them from interacting with each other's evaluations.
+    #
+    # Once a recursive alias is fully resolved, we discard all intermediate
+    # evaluations and only keep the final result. We then mark the resolve value
+    # for the alias as itself, ensure that external evaluations don't expand it.
+    # We keep the actual expanded value in `known_recursive_types` for future
+    # reference.
+    #
+    # We identify recursive type aliases by tracking any aliases we see in
+    # `alias_stack`. If an alias is seen again, we know it is a recursive alias
+    # and note it in `recursive_type_alias`. When we finally unwind to the
+    # previous time we saw the alias, we know it is fully resolved.
+    #
+    # Intermediate evaluations are discarded because evaluating recursive
+    # generic classes use the `seen` dictionary as a cache. Sharing this cache
+    # would cause inconsistent expansion results.
+    #
+    # For example, given A = C|list[B] and B = D|list[A], A|B could expand to
+    # C|D|list[D|list[A]]|list[A] which is technically correct, but not
+    # consistent in the way we want.
+    #
+    # The alias stack is also used to evaluate generic classes. The current
+    # generic alias is tracked in `current_generic_alias`.
+    # See `_eval_types_generic`.
+    alias_stack: set[typing.TypeAliasType | types.GenericAlias] = (
         dataclasses.field(default_factory=set)
     )
-    current_alias: types.GenericAlias | typing.Any | None = None
+    recursive_type_alias: typing.TypeAliasType | types.GenericAlias | None = (
+        None
+    )
+    known_recursive_types: dict[
+        typing.TypeAliasType | types.GenericAlias, typing.Any
+    ] = dataclasses.field(default_factory=dict)
+
+    # The typing.Any is really a types.FunctionType, but mypy gets
+    # confused and wants to treat it as a MethodType.
+    current_generic_alias: types.GenericAlias | typing.Any | None = None
 
 
 # `eval_types()` calls can be nested, context must be preserved
@@ -66,9 +115,7 @@ def _ensure_context() -> typing.Iterator[EvalContext]:
     ctx = _current_context.get()
     ctx_set = False
     if ctx is None:
-        ctx = EvalContext(
-            seen=dict(),
-        )
+        ctx = EvalContext()
         _current_context.set(ctx)
         ctx_set = True
     evaluator_token = nt.special_form_evaluator.set(
@@ -92,19 +139,99 @@ def _get_current_context() -> EvalContext:
     return ctx
 
 
+@contextlib.contextmanager
+def _child_context() -> typing.Iterator[EvalContext]:
+    ctx = _current_context.get()
+    if ctx is None:
+        raise RuntimeError(
+            "type_eval._create_child_context() called outside of eval_types()"
+        )
+
+    try:
+        child_ctx = EvalContext(
+            resolved={
+                # Drop resolved recursive aliases.
+                # This is to allow other recursive aliases to expand them out
+                # independently. For example, if we have a recursive types
+                # A = B|C and B = A|D, we want B to expand even if we already
+                # know A.
+                k: v
+                for k, v in ctx.resolved.items()
+                if k not in ctx.known_recursive_types
+            },
+            seen=ctx.seen.copy(),
+            alias_stack=ctx.alias_stack.copy(),
+            recursive_type_alias=ctx.recursive_type_alias,
+            known_recursive_types=ctx.known_recursive_types.copy(),
+            current_generic_alias=ctx.current_generic_alias,
+        )
+        _current_context.set(child_ctx)
+        yield child_ctx
+    finally:
+        _current_context.set(ctx)
+
+
 def eval_typing(obj: typing.Any):
     with _ensure_context() as ctx:
-        return _eval_types(obj, ctx)
+        result = _eval_types(obj, ctx)
+        if result in ctx.known_recursive_types:
+            result = ctx.known_recursive_types[result]
+        return result
+
+
+def _is_type_alias_type(obj: typing.Any) -> bool:
+    return isinstance(obj, typing.TypeAliasType) or (
+        isinstance(obj, types.GenericAlias)
+        and isinstance(obj.__origin__, typing.TypeAliasType)
+    )
 
 
 def _eval_types(obj: typing.Any, ctx: EvalContext):
-    # Don't recurse into any pending alias expansion
-    if obj in ctx.current_alias_stack:
+    # Found a recursive alias, we need to unwind it
+    if obj in ctx.alias_stack:
+        if _is_type_alias_type(obj):
+            ctx.recursive_type_alias = obj
         return obj
-    # strings match
+
+    # Already resolved or seen, return the result
+    if obj in ctx.resolved:
+        return ctx.resolved[obj]
     if obj in ctx.seen:
         return ctx.seen[obj]
-    ctx.seen[obj] = evaled = _eval_types_impl(obj, ctx)
+
+    if _is_type_alias_type(obj):
+        with _child_context() as child_ctx:
+            child_ctx.alias_stack.add(obj)
+            evaled = _eval_types_impl(obj, child_ctx)
+    else:
+        evaled = _eval_types_impl(obj, ctx)
+        child_ctx = None
+
+    # If we have identified a recursive alias, discard evaluation results.
+    # This prevents external evaluations from being polluted by partial
+    # evaluations.
+    keep_intermediate = True
+    if child_ctx:
+        if child_ctx.recursive_type_alias:
+            if child_ctx.recursive_type_alias == obj:
+                # Finished unwinding.
+                ctx.known_recursive_types[obj] = evaled
+                evaled = obj
+                keep_intermediate = False
+
+            else:
+                ctx.recursive_type_alias = child_ctx.recursive_type_alias
+
+        if keep_intermediate:
+            ctx.resolved |= child_ctx.resolved
+            ctx.seen |= child_ctx.seen
+
+        # In case a child context evaluated a nested recursive alias, we can
+        # keep those results as they are already "consistent".
+        ctx.resolved |= {x: x for x in child_ctx.known_recursive_types.keys()}
+        ctx.known_recursive_types |= child_ctx.known_recursive_types
+
+    ctx.resolved[obj] = evaled
     return evaled
 
 
@@ -196,22 +323,20 @@ def _eval_types_generic(obj: types.GenericAlias, ctx: EvalContext):
     args = tuple(types.CellType(_eval_types(arg, ctx)) for arg in obj.__args__)
     mod = sys.modules[obj.__module__]
 
-    old_obj = ctx.current_alias
-    ctx.current_alias = new_obj  # alias is the new_obj, so names look better
-    ctx.current_alias_stack.add(new_obj)
+    with _child_context() as child_ctx:
+        child_ctx.current_generic_alias = new_obj
+        if not _is_type_alias_type(new_obj):
+            # Type alias types are already added in _eval_types
+            child_ctx.alias_stack.add(new_obj)
 
-    try:
         ff = types.FunctionType(func.__code__, mod.__dict__, None, None, args)
         unpacked = ff(annotationlib.Format.VALUE)
 
-        ctx.seen[obj] = unpacked
-        evaled = _eval_types(unpacked, ctx)
-    except Exception:
-        ctx.seen.pop(obj, None)
-        raise
-    finally:
-        ctx.current_alias = old_obj
-        ctx.current_alias_stack.remove(new_obj)
+        child_ctx.seen[obj] = unpacked
+        evaled = _eval_types(unpacked, child_ctx)
+
+    ctx.seen[obj] = unpacked
+    ctx.recursive_type_alias = child_ctx.recursive_type_alias
 
     return evaled
 

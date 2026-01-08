@@ -251,7 +251,10 @@ def _eval_Members(tp, *, ctx):
 
 @type_eval.register_evaluator(FromUnion)
 def _eval_FromUnion(tp, *, ctx):
-    return tuple[*_union_elems(tp, ctx)]
+    if tp in ctx.known_recursive_types:
+        return tuple[*_union_elems(ctx.known_recursive_types[tp], ctx)]
+    else:
+        return tuple[*_union_elems(tp, ctx)]
 
 
 ##################################################################
@@ -485,12 +488,12 @@ def _eval_NewProtocol(*etyps: Member, ctx):
 
     # If the type evaluation context
     ctx = type_eval._get_current_context()
-    if ctx.current_alias:
-        if isinstance(ctx.current_alias, types.GenericAlias):
-            name = str(ctx.current_alias)
+    if ctx.current_generic_alias:
+        if isinstance(ctx.current_generic_alias, types.GenericAlias):
+            name = str(ctx.current_generic_alias)
         else:
-            name = f"{ctx.current_alias.__name__}[...]"
-        module_name = ctx.current_alias.__module__
+            name = f"{ctx.current_generic_alias.__name__}[...]"
+        module_name = ctx.current_generic_alias.__module__
 
     dct["__module__"] = module_name
 
