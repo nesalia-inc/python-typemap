@@ -30,14 +30,19 @@ type GetQuals[T: Member] = GetArg[T, Member, 2]  # type: ignore[valid-type]
 type GetDefiner[T: Member] = GetArg[T, Member, 3]  # type: ignore[valid-type]
 
 
-class Attrs[T]:
-    pass
-
-
 ParamQuals = typing.Literal["*", "**", "="]
 
 
 class Param[N: str | None, T, Q: ParamQuals = typing.Never]:
+    pass
+
+
+type GetParamName[T: Param] = GetArg[T, Param, 0]  # type: ignore[valid-type]
+type GetParamType[T: Param] = GetArg[T, Param, 1]  # type: ignore[valid-type]
+type GetParamQuals[T: Param] = GetArg[T, Param, 2]  # type: ignore[valid-type]
+
+
+class Attrs[T]:
     pass
 
 

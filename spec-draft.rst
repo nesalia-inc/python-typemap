@@ -32,6 +32,7 @@ We introduce a ``Param`` type the contains all the information about a function 
   ParamQuals = typing.Literal["*", "**", "default", "keyword"]
 
 And then, we can represent the type of a function like::
+
     def func(
         a: int,
         /,
@@ -169,6 +170,19 @@ We also have helpers for extracting those names; they are all definable in terms
   TODO: How should GetAttr interact with descriptors/classmethod? I am leaning towards it should apply the descriptor...
 
 
+--------------------------------
+Callable inspection and creation
+--------------------------------
+
+* TODO: Should ``GetArg`` on a callable automatically convert ``[int, str]`` or whatever into something using ``Param``? Or should a separate operator be needed?
+
+* ``GetParamName[T: Param]``
+* ``GetParamType[T: Param]``
+* ``GetParamQuals[T: Param]``
+
+This is unsatisfying; maybe they all need to be just ``ParamName`` and also ``MemberName`` above.
+We could also merge the getters for ``Param`` and ``Member``.
+
 ----
 
 * ``Length[T: tuple]`` - get the length of a tuple as an int literal (or ``Literal[None]`` if it is unbounded)
@@ -179,7 +193,7 @@ String manipulation operations for string Literal types.
 We can put more in, but this is what typescript has.
 ``Slice`` and ``Concat`` are a poor man's literal template.
 We can actually implement the case functions in terms of them and a
-bunch of conditionals.
+bunch of conditionals, but shouldn't (especially if we want it to work for all unicode!).
 
 -------------------
 String manipulation
@@ -197,6 +211,7 @@ String manipulation
 ----
 
 Two possibilities for creating parameterized functions/types. They are kind of more syntax than functions exactly.  I like the lambda one more.
+
 * ``NewParameterized[V, Ty]`` - ``V`` should be a ``TypeVar`` (ugh!) and ``Ty`` should be a ``Callable`` or a ``NewProtocol`` or some such.
 * ``NewParameterized[lambda v: Ty]`` - The lambda could take multiple params, and introduce multiple variables. The biggest snag is how to specify bounds; one option is via default arguments.
 
