@@ -60,7 +60,7 @@ as (we are omiting the ``Literal`` in places)::
 
 
 Rationale
-^^^^^^^^^
+'''''''''
 We need extended callable support, in order to inspect and produce callables via type-level computation. mypy supports `extended callables <https://mypy.readthedocs.io/en/stable/additional_features.html#extended-callable-types>`__ but they are deprecated in favor of callback protocols.
 
 
@@ -134,7 +134,7 @@ Type operators
 
 
 Object inspection and creation
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+''''''''''''''''''''''''''''''
 
 * ``NewProtocol[*Ps: Member]``
 
@@ -166,7 +166,7 @@ We also have helpers for extracting those names; they are all definable in terms
 
 
 Callable inspection and creation
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+''''''''''''''''''''''''''''''''
 
 ``Callable`` types always have their arguments exposed in the extended Callable format discussed above.
 
@@ -180,7 +180,7 @@ TODO: Should we make ``GetInit`` be literal types of default parameter values to
 * ``Length[T: tuple]`` - get the length of a tuple as an int literal (or ``Literal[None]`` if it is unbounded)
 
 Annotated
-^^^^^^^^^
+'''''''''
 
 Libraries like FastAPI use annotations heavily, and we would like to be able to use annotations to drive type-level computation decision making.
 
@@ -201,7 +201,7 @@ We understand that this may be controversial, as currently Annotated may be full
 
 
 InitField
-^^^^^^^^^
+'''''''''
 
 We want to be able to support transforming types based on dataclasses/attrs/pydantic style field descriptors.  In order to do that, we need to be able to consume things like calls to ``Field``.
 
@@ -224,7 +224,7 @@ So if we write::
 then we would infer the type ``InitField[TypedDict('...', {'default': Literal[0]})]`` for the initializer, and that would be made available as the ``Init`` field of the ``Member``.
 
 String manipulation
-^^^^^^^^^^^^^^^^^^^
+'''''''''''''''''''
 
 String manipulation operations for string Literal types.
 We can put more in, but this is what typescript has.
