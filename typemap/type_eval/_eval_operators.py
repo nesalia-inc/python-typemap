@@ -431,6 +431,28 @@ def _callable_type_to_method(name, typ):
         params, ret = typing.get_args(typ)
         typ = typing.Callable[list(typing.get_args(params)), ret]
     else:
+        params, ret = typing.get_args(typ)
+        # Override the annotations for methods
+        # - use Self for the "self" param, otherwise the fully qualified cls
+        #   name gets used. This ends up being long and annoying to handle.
+        #   GetDefiner can always be used to get the actual type.
+        # - __init__ should return None regardless of what the user says.
+        #   The default return type for methods is Any, so this also handles
+        #   the un-annotated case.
+        params = [
+            (
+                p
+                if typing.get_args(p)[0] != typing.Literal["self"]
+                else Param[
+                    typing.Literal["self"],
+                    typing.Self,
+                    typing.get_args(p)[2],
+                ]
+            )
+            for p in params
+        ]
+        ret = type(None) if name == "__init__" else ret
+        typ = typing.Callable[params, ret]
         head = lambda x: x
 
     func = _signature_to_function(name, _callable_type_to_signature(typ))
