@@ -77,6 +77,7 @@ the types, using `Pydantic <#pydantic_>`_).
 
 Despite all multiple types and duplication here, mechanical rules
 could be written for deriving these types:
+
 * Public should include all non-"hidden" fields, and the primary key
   should be made non-optional
 * Create should include all fields except the primary key
@@ -169,7 +170,7 @@ Prisma-style ORMs
 -----------------
 
 `Prisma <#prisma_>`_, a popular ORM for TypeScript, allows writing
-queries like (adapted from `this example <#prisma-example_>`_::
+queries like (adapted from `this example <#prisma-example_>`_)::
 
   const user = await prisma.user.findMany({
     select: {
@@ -251,6 +252,11 @@ which would have return type ``list[<User>]`` where::
         content: str
 
 
+Unlike the FastAPI-style example above, we probably don't have too
+much need for runtime introspection of the types here, which is good:
+inferring the type of a function is much less likely to be feasible.
+
+
 Implementation
 ''''''''''''''
 
@@ -270,6 +276,7 @@ was created to represent a lowest-common denominator subset of what
 existing libraries do.
 
 ::
+
     # Generate the Member field for __init__ for a class
     type InitFnType[T] = Member[
         Literal["__init__"],
@@ -300,6 +307,12 @@ existing libraries do.
         InitFnType[T],
         *[x for x in Iter[Members[T]]],
     ]
+
+
+TODO: We still need a full story on *how* best to apply this kind of
+type modifier to a type. With dataclasses, which is a decorator, we
+could put it in the decorator type... But what about things that use
+``__init_subclass__`` or even metaclasses?
 
 
 Rationale
