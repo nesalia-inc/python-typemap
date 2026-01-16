@@ -1,5 +1,7 @@
 # Computed Types in Python
 
+See [spec-draft.rst](spec-draft.rst) for the specification draft and [pre-pep.rst](pre-pep.rst) for the PEP draft.
+
 ## Development
 
 1. Clone the repo

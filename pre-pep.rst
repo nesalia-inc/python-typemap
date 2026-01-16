@@ -324,7 +324,7 @@ Rationale
 Specification
 =============
 
-[Describe the syntax and semantics of any new language feature.]
+See `spec-draft.rst <spec-draft.rst>`_ for the current draft specification.
 
 
 Backwards Compatibility
