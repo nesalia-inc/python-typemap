@@ -37,6 +37,210 @@ case of dataclass-like transformations (:pep:`PEP 681 <681>`).
 
 Examples: pydantic/fastapi, dataclasses, sqlalchemy
 
+Prisma-style ORMs
+-----------------
+
+`Prisma <#prisma_>`_, a popular ORM for TypeScript, allows writing
+queries like (adapted from `this example <#prisma-example_>`_)::
+
+  const user = await prisma.user.findMany({
+    select: {
+      name: true,
+      email: true,
+      posts: true,
+    },
+  });
+
+for which the inferred type will be something like::
+
+    {
+        email: string;
+        name: string | null;
+        posts: {
+            id: number;
+            title: string;
+            content: string | null;
+            authorId: number | null;
+        }[];
+    }[]
+
+Here, the output type is a combination of both existing information
+about the type of ``prisma.user`` and the type of the argument to
+``findMany``. It returns an array of objects containing the properties
+of ``user`` that were requested; one of the requested elements,
+``posts``, is a "relation" referencing another model; it has *all* of
+its properties fetched but not its relations.
+
+We would like to be able to do something similar in Python, perhaps
+with a schema defined like::
+
+    class Comment:
+        id: Property[int]
+        name: Property[str]
+        poster: Link[User]
+
+
+    class Post:
+        id: Property[int]
+
+        title: Property[str]
+        content: Property[str]
+
+        comments: MultiLink[Comment]
+        author: Link[Comment]
+
+
+    class User:
+        id: Property[int]
+
+        name: Property[str]
+        email: Property[str]
+        posts: Link[Post]
+
+(In Prisma, a code generator generates type definitions based on a
+prisma schema in its own custom format; you could imagine something
+similar here, or that the definitions were hand written)
+
+and a call like::
+
+    db.select(
+        User,
+        name=True,
+        email=True,
+        posts=True,
+    )
+
+which would have return type ``list[<User>]`` where::
+
+    class <User>:
+        name: str
+        email: str
+        posts: list[<Post>]
+
+    class <Post>
+        id: int
+        title: str
+        content: str
+
+
+Unlike the FastAPI-style example above, we probably don't have too
+much need for runtime introspection of the types here, which is good:
+inferring the type of a function is much less likely to be feasible.
+
+
+.. _qb-impl:
+
+Implementation
+''''''''''''''
+
+This will take something of a tutorial approach in discussing the
+implementation, and explain the features being used as we use
+them. More details were appear in the specification section.
+
+First, to support the annotations we saw above, we have a collection
+of dummy classes with generic types.
+
+::
+
+    class Pointer[T]:
+        pass
+
+    class Property[T](Pointer[T]):
+        pass
+
+    class Link[T](Pointer[T]):
+        pass
+
+    class SingleLink[T](Link[T]):
+        pass
+
+    class MultiLink[T](Link[T]):
+        pass
+
+The ``select`` method is where we start seeing new things.
+
+The ``**kwargs: Unpack[K]`` is part of this proposal, and allows
+*inferring* a TypedDict from keyword args.
+
+``Attrs[K]`` extracts ``Member`` types corresponding to every
+type-annotated attribute of ``K``, while calling ``NewProtocol`` with
+``Member`` arguments constructs a new structural type.
+
+``GetName`` is a getter operator that fetches the name of a ``Member``
+as a literal type--all of these mechanisms lean very heavily on literal types.
+``GetAttr`` gets the type of an attribute from a class.
+
+::
+
+    def select[ModelT, K: BaseTypedDict](
+        typ: type[ModelT],
+        /,
+        **kwargs: Unpack[K],
+    ) -> list[
+        NewProtocol[
+            *[
+                Member[
+                    GetName[c],
+                    ConvertField[GetAttr[ModelT, GetName[c]]],
+                ]
+                for c in Iter[Attrs[K]]
+            ]
+        ]
+    ]: ...
+
+ConvertField is our first type helper, and it is a conditional type
+alias, which decides between two types based on a (limited)
+subtype-ish check.
+
+In ``ConvertField``, we wish to drop the ``Property`` or ``Link``
+annotation and produce the underlying type, as well as, for links,
+producing a new target type containing only properties and wrapping
+``MultiLink`` in a list.
+
+::
+
+    type ConvertField[T] = (
+        AdjustLink[PropsOnly[PointerArg[T]], T] if Sub[T, Link] else PointerArg[T]
+    )
+
+``PointerArg`` gets the type argument to ``Pointer`` or a subclass.
+
+``GetArg[T, Base, I]`` is one of the core primitives; it fetches the
+index ``I`` type argument to ``Base`` from a type ``T``, if ``T``
+inherits from ``Base``.
+
+(The subtleties of this will be discussed later; in this case, it just
+grabs the argument to a ``Pointer``).
+
+::
+
+    type PointerArg[T: Pointer] = GetArg[T, Pointer, 0]
+
+``AdjustLink`` sticks a ``list`` around ``MultiLink``, using features
+we've discussed already.
+
+::
+
+    type AdjustLink[Tgt, LinkTy] = list[Tgt] if Sub[LinkTy, MultiLink] else Tgt
+
+And the final helper, ``PropsOnly[T]``, generates a new type that
+contains all the ``Property`` attributes of ``T``.
+
+::
+
+    type PropsOnly[T] = list[
+        NewProtocol[
+            *[
+                Member[GetName[p], PointerArg[GetType[p]]]
+                for p in Iter[Attrs[T]]
+                if Sub[GetType[p], Property]
+            ]
+        ]
+    ]
+
+The full test is `in our test suite <#qb-test_>`_.
+
+
 Automatically deriving FastAPI CRUD models
 ------------------------------------------
 
@@ -140,7 +344,7 @@ suite, but here is a possible implementation of just ``Public``::
     # If it is a Field, then we try pulling out the "default" field,
     # otherwise we return the type itself.
     type GetDefault[Init] = (
-        GetFieldItem[Init, Literal["default"]] if Sub[Init, Field] else Init
+        GetFieldItem[Init, Literal["default"]] if IsSub[Init, Field] else Init
     )
 
     # Create takes everything but the primary key and preserves defaults
@@ -148,7 +352,7 @@ suite, but here is a possible implementation of just ``Public``::
         *[
             Member[GetName[p], GetType[p], GetQuals[p], GetDefault[GetInit[p]]]
             for p in Iter[Attrs[T]]
-            if not Sub[
+            if not IsSub[
                 Literal[True], GetFieldItem[GetInit[p], Literal["primary_key"]]
             ]
         ]
@@ -166,102 +370,6 @@ from a ``default`` argument to a field or specified directly as an
 initializer).
 
 
-Prisma-style ORMs
------------------
-
-`Prisma <#prisma_>`_, a popular ORM for TypeScript, allows writing
-queries like (adapted from `this example <#prisma-example_>`_)::
-
-  const user = await prisma.user.findMany({
-    select: {
-      name: true,
-      email: true,
-      posts: true,
-    },
-  });
-
-for which the inferred type will be something like::
-
-    {
-        email: string;
-        name: string | null;
-        posts: {
-            id: number;
-            title: string;
-            content: string | null;
-            authorId: number | null;
-        }[];
-    }[]
-
-Here, the output type is a combination of both existing information
-about the type of ``prisma.user`` and the type of the argument to
-``findMany``. It returns an array of objects containing the properties
-of ``user`` that were requested; one of the requested elements,
-``posts``, is a "relation" referencing another model; it has *all* of
-its properties fetched but not its relations.
-
-We would like to be able to do something similar in Python, perhaps
-with a schema defined like::
-
-    class Comment:
-        id: Property[int]
-        name: Property[str]
-        poster: Link[User]
-
-
-    class Post:
-        id: Property[int]
-
-        title: Property[str]
-        content: Property[str]
-
-        comments: MultiLink[Comment]
-        author: Link[Comment]
-
-
-    class User:
-        id: Property[int]
-
-        name: Property[str]
-        email: Property[str]
-        posts: Link[Post]
-
-(In Prisma, a code generator generates type definitions based on a
-prisma schema in its own custom format; you could imagine something
-similar here, or that the definitions were hand written)
-
-and a call like::
-
-    db.select(
-        User,
-        name=True,
-        email=True,
-        posts=True,
-    )
-
-which would have return type ``list[<User>]`` where::
-
-    class <User>:
-        name: str
-        email: str
-        posts: list[<Post>]
-
-    class <Post>
-        id: int
-        title: str
-        content: str
-
-
-Unlike the FastAPI-style example above, we probably don't have too
-much need for runtime introspection of the types here, which is good:
-inferring the type of a function is much less likely to be feasible.
-
-
-Implementation
-''''''''''''''
-
-We have a more `worked example <#qb-test_>`_ in our test suite.
-
 dataclasses-style method generation
 -----------------------------------
 
@@ -274,6 +382,11 @@ merged with the FastAPI-style example above, but it need not be).
 This kind of pattern is widespread enough that :pep:`PEP 681 <681>`
 was created to represent a lowest-common denominator subset of what
 existing libraries do.
+
+.. _init-impl:
+
+Implementation
+''''''''''''''
 
 ::
 
@@ -307,12 +420,6 @@ existing libraries do.
         InitFnType[T],
         *[x for x in Iter[Members[T]]],
     ]
-
-
-TODO: We still need a full story on *how* best to apply this kind of
-type modifier to a type. With dataclasses, which is a decorator, we
-could put it in the decorator type... But what about things that use
-``__init_subclass__`` or even metaclasses?
 
 
 Rationale
@@ -353,6 +460,8 @@ Reference Implementation
 
 Rejected Ideas
 ==============
+
+* Don't attempt to support runtime evaluation, make
 
 [Why certain ideas that were brought while discussing this PEP were not ultimately pursued.]
 
