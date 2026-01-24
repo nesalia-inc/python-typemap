@@ -1,5 +1,8 @@
 #!/bin/sh -ex
 
+echo $LANG
+locale
+locale -a
 export LANG=en_US.UTF-8
 
 mkdir -p build
