@@ -1,9 +1,6 @@
 #!/bin/sh -ex
 
-echo $LANG
-locale
-locale -a
-export LANG=en_US.UTF-8
+export LANG=C.utf8
 
 mkdir -p build
 cd build
