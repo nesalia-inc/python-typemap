@@ -12,8 +12,10 @@ if [ ! -s pep-9999.rst ]; then
     ln -s ../../../pre-pep.rst pep-9999.rst
 fi
 cd ..
+
+# sphinx tls validation of a bunch of intersphinx links is failing on
+# vercel builds and I can't be bothered to look into it more, so just
+# don't worry about failures too much here.
 make html || true
 rm -rf ../html
 cp -r build ../html
-
-find .venv
