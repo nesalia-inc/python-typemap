@@ -535,17 +535,17 @@ def test_eval_getarg_callable_03b():
         def f(cls, x: int, /, y: int, *, z: int) -> int: ...
 
     f = eval_typing(GetMethodLike[IndirectProtocol[C], Literal["f"]])
-    t = eval_typing(GetArg[f, Callable, Literal[0]])
+    t = eval_typing(GetArg[f, classmethod, Literal[0]])
+    t = eval_typing(GetArg[f, classmethod, Literal[1]])
     assert (
         t
         == tuple[
-            Param[Literal["cls"], type[C], Literal["positional"]],
             Param[Literal["x"], int, Literal["positional"]],
             Param[Literal["y"], int],
             Param[Literal["z"], int, Literal["keyword"]],
         ]
     )
-    t = eval_typing(GetArg[f, Callable, Literal[1]])
+    t = eval_typing(GetArg[f, classmethod, Literal[2]])
     assert t is int
 
 
@@ -574,7 +574,7 @@ def test_eval_getarg_callable_04b():
         def f(x: int, /, y: int, *, z: int) -> int: ...
 
     f = eval_typing(GetMethodLike[IndirectProtocol[C], Literal["f"]])
-    t = eval_typing(GetArg[f, Callable, Literal[0]])
+    t = eval_typing(GetArg[f, staticmethod, Literal[0]])
     assert (
         t
         == tuple[
@@ -583,7 +583,7 @@ def test_eval_getarg_callable_04b():
             Param[Literal["z"], int, Literal["keyword"]],
         ]
     )
-    t = eval_typing(GetArg[f, Callable, Literal[1]])
+    t = eval_typing(GetArg[f, staticmethod, Literal[1]])
     assert t is int
 
 
@@ -957,9 +957,8 @@ def test_is_literal_true_vs_one():
     assert eval_typing(IsSub[Literal[True], Literal[1]]) is False
 
 
-def test_callable_to_signature():
+def test_callable_to_signature_01():
     from typemap.type_eval._eval_operators import _callable_type_to_signature
-    from typemap.typing import Param
 
     # Test the example from the docstring:
     # def func(
@@ -994,6 +993,111 @@ def test_callable_to_signature():
         '(_arg0: int, /, b: int, c: int = ..., *args: int, '
         'd: int, e: int = ..., **kwargs: int) -> int'
     )
+
+
+def test_callable_to_signature_02():
+    from typemap.type_eval._eval_operators import _callable_type_to_signature
+
+    class C:
+        pass
+
+    callable_type = classmethod[
+        C,
+        tuple[
+            Param[None, int],
+            Param[Literal["b"], int],
+            Param[Literal["c"], int, Literal["default"]],
+            Param[None, int, Literal["*"]],
+            Param[Literal["d"], int, Literal["keyword"]],
+            Param[Literal["e"], int, Literal["default", "keyword"]],
+            Param[None, int, Literal["**"]],
+        ],
+        int,
+    ]
+    sig = _callable_type_to_signature(callable_type)
+    assert str(sig) == (
+        '(cls: tests.test_type_eval.test_callable_to_signature_02.<locals>.C, '
+        '_arg1: int, /, b: int, c: int = ..., *args: int, '
+        'd: int, e: int = ..., **kwargs: int) -> int'
+    )
+
+
+def test_callable_to_signature_03():
+    from typemap.type_eval._eval_operators import _callable_type_to_signature
+
+    class C:
+        pass
+
+    callable_type = staticmethod[
+        tuple[
+            Param[None, int],
+            Param[Literal["b"], int],
+            Param[Literal["c"], int, Literal["default"]],
+            Param[None, int, Literal["*"]],
+            Param[Literal["d"], int, Literal["keyword"]],
+            Param[Literal["e"], int, Literal["default", "keyword"]],
+            Param[None, int, Literal["**"]],
+        ],
+        int,
+    ]
+    sig = _callable_type_to_signature(callable_type)
+    assert str(sig) == (
+        '(_arg0: int, /, b: int, c: int = ..., *args: int, '
+        'd: int, e: int = ..., **kwargs: int) -> int'
+    )
+
+
+def test_new_protocol_with_methods_01():
+    class C:
+        def member_method(self, x: int) -> int: ...
+        @classmethod
+        def class_method(cls, x: int) -> int: ...
+        @staticmethod
+        def static_method(x: int) -> int: ...
+
+    res = eval_typing(IndirectProtocol[C])
+    fmt = format_helper.format_class(res)
+    assert fmt == textwrap.dedent("""\
+        class IndirectProtocol[tests.test_type_eval.test_new_protocol_with_methods_01.<locals>.C]:
+            def member_method(self: Self, x: int) -> int: ...
+            @classmethod
+            def class_method(cls: type[typing.Self], x: int) -> int: ...
+            @staticmethod
+            def static_method(x: int) -> int: ...
+    """)
+
+
+def test_new_protocol_with_methods_02():
+    C = NewProtocol[
+        Member[
+            Literal["member_method"],
+            Callable[
+                [Param[Literal["self"], Self], Param[Literal["x"], int]], int
+            ],
+            Literal["ClassVar"],
+        ],
+        Member[
+            Literal["class_method"],
+            classmethod[type[Self], tuple[Param[Literal["x"], int]], int],
+            Literal["ClassVar"],
+        ],
+        Member[
+            Literal["static_method"],
+            staticmethod[tuple[Param[Literal["x"], int]], int],
+            Literal["ClassVar"],
+        ],
+    ]
+
+    res = eval_typing(IndirectProtocol[C])
+    fmt = format_helper.format_class(res)
+    assert fmt == textwrap.dedent("""\
+        class IndirectProtocol[typemap.type_eval._eval_operators.NewProtocol]:
+            def member_method(self: Self, x: int) -> int: ...
+            @classmethod
+            def class_method(cls: type[typing.Self], x: int) -> int: ...
+            @staticmethod
+            def static_method(x: int) -> int: ...
+    """)
 
 
 ##############

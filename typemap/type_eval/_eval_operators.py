@@ -283,10 +283,46 @@ def _callable_type_to_signature(callable_type: object) -> inspect.Signature:
           or Never if no qualifiers
     """
     args = typing.get_args(callable_type)
-    if len(args) != 2:
-        raise TypeError(f"Expected Callable[[...], ret], got {callable_type}")
+    if (
+        isinstance(callable_type, types.GenericAlias)
+        and callable_type.__origin__ is classmethod
+    ):
+        if len(args) != 3:
+            raise TypeError(
+                f"Expected classmethod[cls, [...], ret], got {callable_type}"
+            )
 
-    param_types, return_type = args
+        receiver, param_types, return_type = typing.get_args(callable_type)
+        param_types = [
+            Param[
+                typing.Literal["cls"],
+                receiver,  # type: ignore[valid-type]
+                typing.Literal["positional"],
+            ],
+            *param_types.__args__,
+        ]
+
+    elif (
+        isinstance(callable_type, types.GenericAlias)
+        and callable_type.__origin__ is staticmethod
+    ):
+        if len(args) != 2:
+            raise TypeError(
+                f"Expected staticmethod[...], ret], got {callable_type}"
+            )
+
+        param_types, return_type = typing.get_args(callable_type)
+        param_types = [
+            *param_types.__args__,
+        ]
+
+    else:
+        if len(args) != 2:
+            raise TypeError(
+                f"Expected Callable[[...], ret], got {callable_type}"
+            )
+
+        param_types, return_type = args
 
     # Handle the case where param_types is a list of Param types
     if not isinstance(param_types, (list, tuple)):
@@ -424,7 +460,11 @@ def _callable_type_to_method(name, typ):
         # positional only argument. Annoying!
         has_pos_only = any(_is_pos_only(p) for p in typing.get_args(params))
         quals = typing.Literal["positional"] if has_pos_only else typing.Never
-        cls_param = Param[typing.Literal["cls"], type[cls], quals]
+        # Override the receiver type with type[Self].
+        # An annoying thing to know is that for a member classmethod of C,
+        # cls *should* be type[C], but if it was not explicitly annotated, it
+        # will be C.
+        cls_param = Param[typing.Literal["cls"], type[typing.Self], quals]
         typ = typing.Callable[[cls_param] + list(typing.get_args(params)), ret]
     elif head is staticmethod:
         params, ret = typing.get_args(typ)
