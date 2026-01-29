@@ -1,7 +1,7 @@
 import contextvars
 import typing
 from typing import Literal
-from typing import _GenericAlias  # type: ignore
+from typing import _GenericAlias, _LiteralGenericAlias  # type: ignore
 
 _SpecialForm: typing.Any = typing._SpecialForm
 
@@ -197,23 +197,55 @@ def Iter(self, tp):
     return _IterGenericAlias(self, (tp,))
 
 
-class _IsGenericAlias(_GenericAlias, _root=True):  # type: ignore[call-arg]
+class _BoolGenericAlias(_GenericAlias, _root=True):  # type: ignore[call-arg]
     def __bool__(self):
         evaluator = special_form_evaluator.get()
         if evaluator:
-            return evaluator(self)
+            result = evaluator(self)
+            # Unwrap _LiteralGeneric
+            return bool(result)
         else:
             return False
 
 
 @_SpecialForm
 def IsSubtype(self, tps):
-    return _IsGenericAlias(self, tps)
+    return _BoolGenericAlias(self, tps)
 
 
 @_SpecialForm
 def IsSubSimilar(self, tps):
-    return _IsGenericAlias(self, tps)
+    return _BoolGenericAlias(self, tps)
+
+
+@_SpecialForm
+def Matches(self, tps):
+    return _BoolGenericAlias(self, tps)
 
 
 IsSub = IsSubSimilar
+
+
+@_SpecialForm
+def Bool(self, tp):
+    return _BoolGenericAlias(self, tp)
+
+
+@_SpecialForm
+def AllOf(self, tp):
+    return _BoolGenericAlias(self, tp)
+
+
+@_SpecialForm
+def AnyOf(self, tp):
+    return _BoolGenericAlias(self, tp)
+
+
+class _BoolLiteralGenericAlias(_LiteralGenericAlias, _root=True):  # type: ignore[call-arg]
+    def __bool__(self):
+        return typing.get_args(self)[0]
+
+
+@_SpecialForm
+def _BoolLiteral(self, tp):
+    return _BoolLiteralGenericAlias(self, tp)

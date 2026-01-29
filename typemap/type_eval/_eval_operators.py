@@ -16,7 +16,10 @@ from typemap.type_eval._eval_typing import (
     _get_class_type_hint_namespaces,
 )
 from typemap.typing import (
+    AllOf,
+    AnyOf,
     Attrs,
+    Bool,
     Capitalize,
     DropAnnotations,
     FromUnion,
@@ -31,6 +34,7 @@ from typemap.typing import (
     Iter,
     Length,
     Lowercase,
+    Matches,
     Member,
     Members,
     NewProtocol,
@@ -40,6 +44,7 @@ from typemap.typing import (
     StrSlice,
     Uncapitalize,
     Uppercase,
+    _BoolLiteral,
 )
 
 ##################################################################
@@ -233,13 +238,67 @@ def _eval_Iter(tp, *, ctx):
 @type_eval.register_evaluator(IsSubtype)
 @_lift_evaluated
 def _eval_IsSubtype(lhs, rhs, *, ctx):
-    return type_eval.issubtype(lhs, rhs)
+    return _BoolLiteral[type_eval.issubtype(lhs, rhs)]
 
 
 @type_eval.register_evaluator(IsSubSimilar)
 @_lift_evaluated
 def _eval_IsSubSimilar(lhs, rhs, *, ctx):
-    return type_eval.issubsimilar(lhs, rhs)
+    return _BoolLiteral[type_eval.issubsimilar(lhs, rhs)]
+
+
+@type_eval.register_evaluator(Matches)
+@_lift_evaluated
+def _eval_Matches(lhs, rhs, *, ctx):
+    return _BoolLiteral[
+        type_eval.issubsimilar(lhs, rhs) and type_eval.issubsimilar(rhs, lhs)
+    ]
+
+
+def _eval_bool_tp(tp, ctx):
+    if _typing_inspect.is_generic_alias(tp) and tp.__origin__ is _BoolLiteral:
+        return _BoolLiteral[bool(tp.__args__[0])]
+    else:
+        return _BoolLiteral[
+            any(
+                type_eval.issubsimilar(arg, typing.Literal[True])
+                and not type_eval.issubsimilar(arg, typing.Never)
+                for arg in _union_elems(tp, ctx)
+            )
+        ]
+
+
+@type_eval.register_evaluator(Bool)
+@_lift_evaluated
+def _eval_Bool(tp, *, ctx):
+    return _eval_bool_tp(tp, ctx)
+
+
+@type_eval.register_evaluator(AllOf)
+@_lift_evaluated
+def _eval_AllOf(*tp, ctx):
+    return _BoolLiteral[all(_eval_bool_tp(tp, ctx) for tp in tp)]
+
+
+@type_eval.register_evaluator(AnyOf)
+@_lift_evaluated
+def _eval_AnyOf(*tp, ctx):
+    return _BoolLiteral[any(_eval_bool_tp(tp, ctx) for tp in tp)]
+
+
+@type_eval.register_evaluator(_BoolLiteral)
+@_lift_evaluated
+def _eval_BoolLiteral(tp, *, ctx):
+    from typemap.typing import _BoolLiteralGenericAlias
+
+    if isinstance(tp, type):
+        raise TypeError(f"Expected literal type, got '{tp.__name__}'")
+
+    # If already wrapped, just return it
+    if isinstance(tp, _BoolLiteralGenericAlias):
+        return tp
+
+    return _BoolLiteral[tp]
 
 
 ##################################################################
