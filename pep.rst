@@ -281,9 +281,9 @@ arrays, such as::
 The example in the that PEP shows how ``TypeVarTuple`` can be used to
 make sure that both sides of an arithmetic operation having matching
 shapes. Most multi-dimensional array libraries, however, also support
-[#broadcasting]_, which allows the mixing of differently shaped data.
-With this PEP, we can define a ``Broadcast[A, B]`` type alias, and
-then use it as a return type::
+broadcasting [#broadcasting]_, which allows the mixing of differently
+shaped data.  With this PEP, we can define a ``Broadcast[A, B]`` type
+alias, and then use it as a return type::
 
     class Array[DType, *Shape]:
         def __add__[*Shape2](
