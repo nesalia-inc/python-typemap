@@ -323,11 +323,11 @@ We can then do::
     # err1 + err2  # E: Broadcast mismatch: Literal[2], Literal[3]
 
 
-TODO: Link the implementation
+(Example code for implementing this :ref:`below <numpy-impl>`.)
 
 
-Specification of Needed Preliminaries
-=====================================
+Specification of Some Prerequisites
+===================================
 
 (Some content is still in `spec-draft.rst <spec-draft.rst>`_).
 
@@ -350,8 +350,7 @@ Here ``BaseTypedDict`` is defined as::
     class BaseTypedDict(typing.TypedDict):
         pass
 
-But any typeddict would be allowed there. (TODO: Or maybe we should
-allow ``dict``?)
+But any typeddict would be allowed there.
 
 Then, if we had a call like::
 
@@ -627,13 +626,13 @@ Basic operators
   member named ``S`` from the class ``T``.
 
 
-* ``GetSpecialAttr[T: type, Attr: Literal[str]]``: Extract the value
+* ``GetSpecialAttr[T: type, Attr: Literal[str]]``: Extracts the value
   of special attribute named ``Attr`` from the class ``T``. Valid
   attributes are ``__name__``, ``__module__``, and ``__qualname__``.
   Returns the value as a ``Literal[str]``.
 
 
-* ``Length[T: tuple]`` - get the length of a tuple as an int literal
+* ``Length[T: tuple]`` - Gets the length of a tuple as an int literal
   (or ``Literal[None]`` if it is unbounded)
 
 
@@ -643,7 +642,7 @@ All of the operators in this section are :ref:`lifted over union types
 Union processing
 ''''''''''''''''
 
-* ``FromUnion[T]``: returns a tuple containing all of the union
+* ``FromUnion[T]``: Returns a tuple containing all of the union
   elements, or a 1-ary tuple containing T if it is not a union.
 
 * ``Union[*Ts]``: ``Union`` will become able to take variadic
@@ -711,13 +710,15 @@ All of the operators in this section are :ref:`lifted over union types
 Object creation
 '''''''''''''''
 
-* ``NewProtocol[*Ps: Member]``
+* ``NewProtocol[*Ms: Member]``: Create a new structural protocol with members
+  specified by ``Member`` arguments
 
 * ``NewProtocolWithBases[Bases, Ps: tuple[Member]]`` - A variant that
-  allows specifying bases too. (UNIMPLEMENTED) - OR MAYBE SHOULD NOT EXIST
+  allows specifying bases too. TODO: Is this something we actually want?
 
-* ``NewTypedDict[*Ps: Member]`` -- TODO: Needs fleshing out; will work
-  similarly to ``NewProtocol`` but has different flags
+* ``NewTypedDict[*Ps: Member]`` - Creates a new ``TypedDict`` with
+  items specified by the ``Member`` arguments. TODO: Do we want a way
+  to specify ``extra_items``?
 
 
 N.B: Currently we aren't proposing any way to create nominal classes
@@ -817,9 +818,6 @@ etc).
 
 (This is a little unsatisfying. Rationale discussed :ref:`below
 <generic-callable-rationale>`.)
-
-
-(LAMBDA PART NOT IMPLEMENTED YET)
 
 TODO: Decide if we have any mechanisms to inspect/destruct
 ``GenericCallable``. Maybe can fetch the variable information and
@@ -1258,12 +1256,12 @@ we encounter a variable.)
 
 
 The reason we suggest restricting the use of ``GenericCallable`` to
-the type argument of ``Member`` is because full impredicative
-polymorphism (where you can have generic type binding nested inside
-types and you can instantiate type variables with other generic types)
-is an big can of worms when combined with type inference (TODO: CITE).
-While it would be nice to support, we don't want to
-open that can of worms now.
+the type argument of ``Member`` is because impredicative
+polymorphism (where you you can instantiate type variables with other
+generic types) and rank-N types (where generics can be bound in nested
+positions deep inside function types) are cans of worms when combined
+with type inference [#undecidable]_.  While it would be nice to support,
+we don't want to open that can of worms now.
 
 
 The unbound type variable tuple is so that bounds and defaults and
@@ -1450,7 +1448,15 @@ Footnotes
 .. [#ref-impl] https://github.com/msullivan/mypy/tree/typemap
 .. [#runtime] https://github.com/vercel/python-typemap/
 .. [#survey] https://engineering.fb.com/2025/12/22/developer-tools/python-typing-survey-2025-code-quality-flexibility-typing-adoption/
+.. [#undecidable]
 
+* "Partial polymorphic type inference is undecidable" by Hans Boehm: https://dl.acm.org/doi/10.1109/SFCS.1985.44
+* "On the Undecidability of Partial Polymorphic Type Reconstruction" by Frank Pfenning: https://www.cs.cmu.edu/~fp/papers/CMU-CS-92-105.pdf
+
+  Our setting does not try to infer generic types for functions,
+  though, which might dodge some of the problems. On the other hand,
+  we have subtyping. (Honestly we are already pretty deep into some
+  of these cans of worms.)
 
 
 Copyright
