@@ -580,7 +580,10 @@ Boolean operators
 '''''''''''''''''
 
 * ``IsAssignable[T, S]``: Returns a boolean literal type indicating whether
-  ``S`` is assignable to ``T``.
+  ``T`` is assignable to ``S``.
+
+   (That is, it is a "consistent subtype". This is subtyping extended
+   to gradual types.)
 
 * ``IsEquivalent[T, S]``:
   Equivalent to ``IsAssignable[T, S] and IsAssignable[S, T]``.
@@ -1325,7 +1328,7 @@ like::
         type definer = D
 
 We considered this but rejected it due to runtime implementation
-concerns: an expression like ``Member[Literal["x", int]].name`` would
+concerns: an expression like ``Member[Literal["x"], int].name`` would
 need to return an object that captures both the content of the type
 alias while maintaining the ``_GenericAlias`` of the applied class so
 that type variables may be substituted for.
@@ -1339,14 +1342,14 @@ We wouldn't be able to have the operation lift over unions or the like
 (unless we were willing to modify ``__getattr__`` for
 ``types.UnionType`` and ``typing._UnionGenericAlias`` to do so!)
 
-That just leave semantic and philosophical concerns: it arguably makes
+That just leaves semantic and philosophical concerns: it arguably makes
 the model more complicated, but a lot of code will read much nicer.
 
 Another option would be to skip introducing a general mechanism (for
 now, at least), but at least make dot notation work on ``Member``,
 which will be extremely common.
 
-With dot notation,  ``PropsOnly`` (from
+With dot notation, ``PropsOnly`` (from
 :ref:`the query builder example <qb-impl>`) would look like::
 
     type PropsOnly[T] = typing.NewProtocol[
