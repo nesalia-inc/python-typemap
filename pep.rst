@@ -689,11 +689,6 @@ qualifier. ``staticmethod`` and ``classmethod`` will return
 ``staticmethod`` and ``classmethod`` types, which are subscriptable as
 of 3.14.
 
-TODO: What do we do about decorators in general, *at runtime*... This
-seems pretty cursed. We can probably sometimes evaluate them, if there
-are annotations at runtime, but in general that would require full
-subtype checking, which we can't do.
-
 We also have helpers for extracting the fields of ``Members``; they
 are all definable in terms of ``GetArg``. (Some of them are shared
 with ``Param``, discussed below.)
@@ -705,7 +700,7 @@ with ``Param``, discussed below.)
 * ``GetDefiner[T: Member]``
 
 All of the operators in this section are :ref:`lifted over union types
-<lifting>`. (BUT TODO: should they be?)
+<lifting>`.
 
 Object creation
 '''''''''''''''
@@ -713,7 +708,7 @@ Object creation
 * ``NewProtocol[*Ms: Member]``: Create a new structural protocol with members
   specified by ``Member`` arguments
 
-* ``NewProtocolWithBases[Bases, Ps: tuple[Member]]`` - A variant that
+* ``NewProtocolWithBases[Bases: tuple[type], *Ms: Member]`` - A variant that
   allows specifying bases too. TODO: Is this something we actually want?
 
 * ``NewTypedDict[*Ps: Member]`` - Creates a new ``TypedDict`` with
@@ -865,7 +860,7 @@ Raise error
 Update class
 ''''''''''''
 
-TODO: This is kind of sketchy but it is I think needed for defining
+N.B: This is kind of sketchy but it is I think needed for defining
 base classes and type decorators that do ``dataclass`` like things.
 
 * ``UpdateClass[*Ps: Member]``: A special form that *updates* an
@@ -942,7 +937,12 @@ those cases, we add a new hook to ``typing``:
   If set to ``None`` (the default), the boolean operators will return
   ``False`` while ``Iter`` will evaluate to
   ``iter(typing.TypeVarTuple("_IterDummy"))``.
-  (TODO: Or should it be to ``iter([])``?)
+
+
+There has been some discussion of adding a ``Format.AST`` mode for
+fetching annotations. That would combine extremely well with this
+proposal, as it would make it easy to still fetch fully unevaluated
+annotations.
 
 Examples / Tutorial
 ===================
