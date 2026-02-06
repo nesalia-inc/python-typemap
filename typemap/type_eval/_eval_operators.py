@@ -464,7 +464,7 @@ def _is_pos_only(param):
     )
 
 
-def _callable_type_to_method(name, typ):
+def _callable_type_to_method(name, typ, ctx):
     """Turn a callable type into a method.
 
     I'm not totally sure if this is worth doing! The main accomplishment
@@ -475,8 +475,10 @@ def _callable_type_to_method(name, typ):
 
     head = typing.get_origin(typ)
     if head is GenericCallable:
-        ttparams, typ = typing.get_args(typ)
+        # Call the lambda with type variables to substitute the type variables
+        ttparams, ttfunc = typing.get_args(typ)
         type_params = typing.get_args(ttparams)
+        typ = ttfunc(*type_params)
         head = typing.get_origin(typ)
 
     if head is classmethod:
@@ -578,8 +580,38 @@ def _function_type(func, *, receiver_type):
     else:
         f = typing.Callable[params, ret]
     if root.__type_params__:
-        f = GenericCallable[tuple[*root.__type_params__], f]
+        # Must store a lambda that performs type variable substitution
+        type_params = root.__type_params__
+        callable_lambda = _create_generic_callable_lambda(f, type_params)
+        f = GenericCallable[tuple[*type_params], callable_lambda]
     return f
+
+
+def _create_generic_callable_lambda(
+    f: typing.Callable | classmethod | staticmethod,
+    type_params: tuple[typing.TypeVar, ...],
+):
+    if typing.get_origin(f) in (staticmethod, classmethod):
+        return lambda *vs: _apply_generic.substitute(
+            f, dict(zip(type_params, vs, strict=True))
+        )
+
+    else:
+        # Callable params are stored as a list
+        params, ret = typing.get_args(f)
+
+        return lambda *vs: typing.Callable[
+            [
+                _apply_generic.substitute(
+                    p,
+                    dict(zip(type_params, vs, strict=True)),
+                )
+                for p in params
+            ],
+            _apply_generic.substitute(
+                ret, dict(zip(type_params, vs, strict=True))
+            ),
+        ]
 
 
 def _resolved_function_signature(func, receiver_type=None):
@@ -888,7 +920,13 @@ def _eval_GetArg(tp, base, idx, *, ctx) -> typing.Any:
         return typing.Never
 
     try:
-        return _fix_type(args[_eval_literal(idx, ctx)])
+        idx_val = _eval_literal(idx, ctx)
+
+        if base_head is GenericCallable and idx_val >= 1:
+            # Disallow access to callable lambda
+            return typing.Never
+
+        return _fix_type(args[idx_val])
     except IndexError:
         return typing.Never
 
@@ -900,6 +938,11 @@ def _eval_GetArgs(tp, base, *, ctx) -> typing.Any:
     args = _get_args(tp, base_head, ctx)
     if args is None:
         return typing.Never
+
+    if base_head is GenericCallable:
+        # Disallow access to callable lambda
+        return tuple[args[0]]  # type: ignore[valid-type]
+
     return tuple[*args]  # type: ignore[valid-type]
 
 
@@ -1075,7 +1118,7 @@ def _eval_NewProtocol(*etyps: Member, ctx):
         if type_eval.issubtype(
             typing.Literal["ClassVar"], tquals
         ) and _is_method_like(typ):
-            dct[name] = _callable_type_to_method(name, typ)
+            dct[name] = _callable_type_to_method(name, typ, ctx)
         else:
             annos[name] = _add_quals(typ, tquals)
             _unpack_init(dct, name, init)

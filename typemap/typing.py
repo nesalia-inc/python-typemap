@@ -5,7 +5,11 @@ import typing
 import types
 
 from typing import Literal, Unpack
-from typing import _GenericAlias, _LiteralGenericAlias, _UnpackGenericAlias
+from typing import (
+    _GenericAlias,
+    _LiteralGenericAlias,
+    _UnpackGenericAlias,
+)
 
 _SpecialForm: typing.Any = typing._SpecialForm
 
@@ -67,14 +71,24 @@ class SpecialFormEllipsis:
 ###
 
 
-# We really need to be able to represent generic function types but it
-# is a problem for all kinds of reasons...
-# Can we bang it into Callable??
-class GenericCallable[
-    TVs: tuple[typing.TypeVar, ...],
-    C: typing.Callable | staticmethod | classmethod,
-]:
+class _GenericCallableGenericAlias(_GenericAlias, _root=True):
     pass
+
+
+class GenericCallable:
+    def __class_getitem__(cls, params):
+        message = (
+            "GenericCallable must be used as "
+            "GenericCallable[tuple[TypeVar, ...], lambda <vs>: callable]."
+        )
+        if not isinstance(params, tuple) or len(params) != 2:
+            raise TypeError(message)
+
+        typevars, func = params
+        if not callable(func):
+            raise TypeError(message)
+
+        return _GenericCallableGenericAlias(cls, (typevars, func))
 
 
 ###
