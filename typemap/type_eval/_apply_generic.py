@@ -22,7 +22,7 @@ class Boxed:
     args: dict[Any, Any]
 
     str_args: dict[str, Any] = dataclasses.field(init=False)
-    mro: list[Boxed] = dataclasses.field(init=False)
+    mro: tuple[Boxed, ...] = dataclasses.field(init=False)
 
     def __post_init__(self):
         object.__setattr__(
@@ -153,7 +153,9 @@ def merge_boxed_mro[T](seqs: list[list[T]]) -> list[T]:
 
 
 def _compute_mro(C: Boxed) -> list[Boxed]:
-    return merge_boxed_mro([[C]] + [b.mro for b in C.bases] + [list(C.bases)])
+    return merge_boxed_mro(
+        [[C]] + [list(b.mro) for b in C.bases] + [list(C.bases)]
+    )
 
 
 def make_func(
