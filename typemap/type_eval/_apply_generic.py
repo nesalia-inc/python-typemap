@@ -189,84 +189,67 @@ def make_func(
     return new_func
 
 
-def _get_closure_types(af: types.FunctionType) -> dict[str, type]:
-    # Generate a fallback mapping of closure classes.
-    # This is needed for locally defined generic types which reference
-    # themselves in their type annotations.
-    if not af.__closure__:
-        return {}
-    return {
-        name: variable.cell_contents
-        for name, variable in zip(
-            af.__code__.co_freevars, af.__closure__, strict=True
-        )
-    }
-
-
 EXCLUDED_ATTRIBUTES = typing.EXCLUDED_ATTRIBUTES - {'__init__'}  # type: ignore[attr-defined]
+
+
+def get_annotations(
+    obj: object,
+    args: dict[str, object],
+    key: str = '__annotate__',
+    annos_ok: bool = True,
+) -> Any | None:
+    """Get the annotations on an object, substituting in type vars."""
+
+    rr = None
+    globs = None
+    if af := typing.cast(types.FunctionType, getattr(obj, key, None)):
+        # Substitute in names that are provided but keep the existing
+        # values for everything else.
+        closure = tuple(
+            types.CellType(args[name]) if name in args else orig_value
+            for name, orig_value in zip(
+                af.__code__.co_freevars, af.__closure__ or (), strict=True
+            )
+        )
+
+        globs = af.__globals__
+        ff = types.FunctionType(af.__code__, globs, af.__name__, None, closure)
+        rr = ff(annotationlib.Format.VALUE)
+    elif annos_ok and (rr := getattr(obj, "__annotations__", None)):
+        globs = {}
+        if mod := sys.modules.get(obj.__module__):
+            globs.update(vars(mod))
+
+    if isinstance(rr, dict) and any(isinstance(v, str) for v in rr.values()):
+        # Copy in any __type_params__ that aren't provided for, so that if
+        # we have to eval, we have them.
+        if params := getattr(obj, "__type_params__", None):
+            args = args.copy()
+            for param in params:
+                if str(param) not in args:
+                    args[str(param)] = param
+
+        for k, v in rr.items():
+            # Eval strings
+            if isinstance(v, str):
+                v = eval(v, globs, args)
+                # Handle cases where annotation is explicitly a string,
+                # e.g.:
+                #   class Foo[X]:
+                #       x: "Foo[X | None]"
+                if isinstance(v, str):
+                    v = eval(v, globs, args)
+            rr[k] = v
+
+    return rr
 
 
 def get_local_defns(boxed: Boxed) -> tuple[dict[str, Any], dict[str, Any]]:
     annos: dict[str, Any] = {}
     dct: dict[str, Any] = {}
 
-    if af := typing.cast(
-        types.FunctionType, getattr(boxed.cls, "__annotate__", None)
-    ):
-        # Class has annotations, let's resolve generic arguments
-
-        closure_types = _get_closure_types(af)
-        args = tuple(
-            types.CellType(
-                boxed.cls.__dict__
-                if name == "__classdict__"
-                else boxed.str_args[name]
-                if name in boxed.str_args
-                else closure_types[name]
-            )
-            for name in af.__code__.co_freevars
-        )
-
-        ff = types.FunctionType(
-            af.__code__, af.__globals__, af.__name__, None, args
-        )
-        rr = ff(annotationlib.Format.VALUE)
-
-        if rr:
-            for k, v in rr.items():
-                if isinstance(v, str):
-                    # Handle cases where annotation is explicitly a string,
-                    # e.g.:
-                    #
-                    #   class Foo[X]:
-                    #       x: "Foo[X | None]"
-
-                    annos[k] = eval(v, af.__globals__, boxed.str_args)
-                else:
-                    annos[k] = v
-    elif af := getattr(boxed.cls, "__annotations__", None):
-        # TODO: substitute vars in this case
-        _globals = {}
-        if mod := sys.modules.get(boxed.cls.__module__):
-            _globals.update(vars(mod))
-        _globals.update(boxed.str_args)
-
-        _locals = dict(boxed.cls.__dict__)
-        _locals.update(boxed.str_args)
-
-        for k, v in af.items():
-            if isinstance(v, str):
-                result = eval(v, _globals, _locals)
-                # Handle cases where annotation is explicitly a string
-                # e.g.
-                #   class Foo[T]:
-                #       x: "Bar[T]"
-                if isinstance(result, str):
-                    result = eval(result, _globals, _locals)
-                annos[k] = result
-
-            else:
-                annos[k] = v
+    if (rr := get_annotations(boxed.cls, boxed.str_args)) is not None:
+        annos.update(rr)
 
     for name, orig in boxed.cls.__dict__.items():
         if name in EXCLUDED_ATTRIBUTES:
@@ -275,42 +258,18 @@ def get_local_defns(boxed: Boxed) -> tuple[dict[str, Any], dict[str, Any]]:
         stuff = inspect.unwrap(orig)
 
         if isinstance(stuff, types.FunctionType):
-            local_fn: types.FunctionType | classmethod | staticmethod | None = (
-                None
-            )
+            local_fn: Any = None
 
-            if af := typing.cast(
-                types.FunctionType, getattr(stuff, "__annotate__", None)
-            ):
-                params = dict(
-                    zip(
-                        map(str, stuff.__type_params__),
-                        stuff.__type_params__,
-                        strict=True,
-                    )
-                )
-
-                closure_types = _get_closure_types(af)
-                args = tuple(
-                    types.CellType(
-                        boxed.cls.__dict__
-                        if name == "__classdict__"
-                        else params[name]
-                        if name in params
-                        else boxed.str_args[name]
-                        if name in boxed.str_args
-                        else closure_types[name]
-                    )
-                    for name in af.__code__.co_freevars
-                )
-
-                ff = types.FunctionType(
-                    af.__code__, af.__globals__, af.__name__, None, args
-                )
-                rr = ff(annotationlib.Format.VALUE)
-
+            # TODO: This annos_ok thing is a hack because processing
+            # __annotations__ on methods broke stuff and I didn't want
+            # to chase it down yet.
+            if (
+                rr := get_annotations(stuff, boxed.str_args, annos_ok=False)
+            ) is not None:
                 local_fn = make_func(orig, rr)
-            elif af := getattr(stuff, "__annotations__", None):
+            elif getattr(stuff, "__annotations__", None):
+                # XXX: This is totally wrong; we still need to do
+                # substitute in class vars
                 local_fn = stuff
 
             if local_fn is not None:
