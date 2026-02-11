@@ -16,6 +16,7 @@ from typemap.type_eval import _apply_generic, _typing_inspect
 from typemap.type_eval._eval_typing import (
     _child_context,
     _eval_types,
+    EvalContext,
 )
 from typemap.typing import (
     Attrs,
@@ -82,7 +83,7 @@ def _make_init_type(v):
         return typing.Literal[(v,)]
 
 
-def cached_box(cls, *, ctx):
+def cached_box(cls, *, ctx: EvalContext):
     if str(cls).startswith('typemap.typing'):
         return _apply_generic.box(cls)
     if cls in ctx.box_cache:
@@ -186,34 +187,49 @@ def get_annotated_method_hints(cls, *, ctx):
 
 
 def _eval_init_subclass(
-    box: _apply_generic.Boxed, ctx: typing.Any
+    box: _apply_generic.Boxed, ctx: EvalContext
 ) -> _apply_generic.Boxed:
     """Get type after all __init_subclass__ with UpdateClass are evaluated."""
     for abox in box.mro[1:]:  # Skip the type itself
         with _child_context() as ctx:
-            if ms := _get_update_class_members(
-                box.cls, abox.alias_type(), ctx=ctx
-            ):
+            if ms := _get_update_class_members(box, abox, ctx=ctx):
                 nbox = _apply_generic.box(
-                    _create_updated_class(box.cls, ms, ctx=ctx)
+                    _create_updated_class(box, ms, ctx=ctx)
                 )
                 # We want to preserve the original cls for Members output
-                box = dataclasses.replace(nbox, orig_cls=box.canonical_cls)
-                ctx.box_cache[box.cls] = box
+                box = dataclasses.replace(
+                    nbox, orig_cls=box.canonical_cls, args=box.args
+                )
+                ctx.box_cache[box.alias_type()] = box
     return box
 
 
 def _get_update_class_members(
-    cls: type, base: type, ctx: typing.Any
+    box: _apply_generic.Boxed,
+    boxed_base: _apply_generic.Boxed,
+    ctx: EvalContext,
 ) -> list[Member] | None:
-    init_subclass = base.__dict__.get("__init_subclass__")
+    cls = box.cls
+
+    # Get __init_subclass__ from the base class's origin if base is generic.
+    base_origin = boxed_base.cls
+    init_subclass = base_origin.__dict__.get("__init_subclass__")
     if not init_subclass:
         return None
     init_subclass = inspect.unwrap(init_subclass)
 
     args = {}
+    # Get any type params from the base class if it is generic
+    if (base_args := boxed_base.args.values()) and (
+        origin_params := getattr(base_origin, '__type_params__', None)
+    ):
+        args = dict(
+            zip((p.__name__ for p in origin_params), base_args, strict=True)
+        )
+
+    # Get type params from function
     if type_params := getattr(init_subclass, '__type_params__', None):
-        args[str(type_params[0])] = cls
+        args[type_params[0].__name__] = box.alias_type()
 
     init_subclass_annos = _apply_generic.get_annotations(init_subclass, args)
 
@@ -256,7 +272,10 @@ def _get_update_class_members(
     return None
 
 
-def _create_updated_class(t: type, ms: list[Member], ctx) -> type:
+def _create_updated_class(
+    box: _apply_generic.Boxed, ms: list[Member], ctx: EvalContext
+) -> type:
+    t = box.cls
     dct: dict[str, object] = {}
 
     # Copy the module
@@ -280,8 +299,25 @@ def _create_updated_class(t: type, ms: list[Member], ctx) -> type:
             _unpack_init(dct, member_name, init)
 
     # Create the updated class
+
+    # If typing.Generic is a base, we need to use it with the type params
+    # applied. Additionally, use types.newclass to properly resolve the mro.
+    bases = tuple(
+        b.alias_type()
+        if b.cls is not typing.Generic
+        else typing.Generic[t.__type_params__]  # type: ignore[index]
+        for b in box.bases
+    )
+
+    kwds = {}
     mcls = type(t)
-    cls = mcls(t.__name__, t.__bases__, dct)
+    if mcls is not type:
+        kwds["metaclass"] = mcls
+
+    cls = types.new_class(t.__name__, bases, kwds, lambda ns: ns.update(dct))
+    # Explicitly set __type_params__. This normally doesn't work, but we are
+    # creating fake classes for the purpose of type evaluation.
+    cls.__type_params__ = t.__type_params__
 
     return cls
 

@@ -2017,6 +2017,199 @@ def test_update_class_members_04():
     )
 
 
+def test_update_class_members_05():
+    # Generic base class with UpdateClass
+    class A[T]:
+        a: T
+
+        def __init_subclass__[U](
+            cls: type[U],
+        ) -> AttrsAsSets[U]:
+            super().__init_subclass__()
+
+    class B(A[int]):
+        b: str
+
+    attrs = eval_typing(Attrs[B])
+    assert attrs.__args__ == (
+        Member[Literal["a"], set[int], Never, Never, B],
+        Member[Literal["b"], set[str], Never, Never, B],
+    )
+
+
+def test_update_class_members_06():
+    # Generic derived class with UpdateClass
+    class A:
+        a: int
+
+        def __init_subclass__[T](
+            cls: type[T],
+        ) -> AttrsAsSets[T]:
+            super().__init_subclass__()
+
+    class B[T](A):
+        b: T
+
+    attrs = eval_typing(Attrs[B[int]])
+    assert attrs.__args__ == (
+        Member[Literal["a"], set[int], Never, Never, B[int]],
+        Member[Literal["b"], set[int], Never, Never, B[int]],
+    )
+
+    attrs = eval_typing(Attrs[B[str]])
+    assert attrs.__args__ == (
+        Member[Literal["a"], set[int], Never, Never, B[str]],
+        Member[Literal["b"], set[str], Never, Never, B[str]],
+    )
+
+
+def test_update_class_members_07():
+    # Generic derived and base class with UpdateClass
+    # derived from generic base
+    class A[T]:
+        a: T
+
+        def __init_subclass__[U](
+            cls: type[U],
+        ) -> AttrsAsSets[U]:
+            super().__init_subclass__()
+
+    class B[T](A[tuple[T]]):
+        b: T
+
+    class C[T, U](A[U]):
+        c: T
+
+    attrs = eval_typing(Attrs[B[int]])
+    assert attrs.__args__ == (
+        Member[Literal["a"], set[tuple[int]], Never, Never, B[int]],
+        Member[Literal["b"], set[int], Never, Never, B[int]],
+    )
+
+    attrs = eval_typing(Attrs[C[int, str]])
+    assert attrs.__args__ == (
+        Member[Literal["a"], set[str], Never, Never, C[int, str]],
+        Member[Literal["c"], set[int], Never, Never, C[int, str]],
+    )
+
+
+def test_update_class_members_08():
+    # Generic derived and base class with UpdateClass
+    # derived from specialized base
+    class A[T]:
+        a: T
+
+        def __init_subclass__[U](
+            cls: type[U],
+        ) -> AttrsAsSets[U]:
+            super().__init_subclass__()
+
+    class B[T](A[int]):
+        b: T
+
+    attrs = eval_typing(Attrs[B[int]])
+    assert attrs.__args__ == (
+        Member[Literal["a"], set[int], Never, Never, B[int]],
+        Member[Literal["b"], set[int], Never, Never, B[int]],
+    )
+
+    attrs = eval_typing(Attrs[B[str]])
+    assert attrs.__args__ == (
+        Member[Literal["a"], set[int], Never, Never, B[str]],
+        Member[Literal["b"], set[str], Never, Never, B[str]],
+    )
+
+
+def test_update_class_members_09():
+    # Generic classes which use their type params in UpdateClass
+    class A[V]:
+        def __init_subclass__[T](
+            cls: type[T],
+        ) -> UpdateClass[Member[Literal["a"], V], *Attrs[T]]:
+            super().__init_subclass__()
+
+    class B[V](A[int]):
+        def __init_subclass__[T](
+            cls: type[T],
+        ) -> UpdateClass[Member[Literal["b"], V], *Attrs[T]]:
+            super().__init_subclass__()
+
+    class C[V](B[str]):
+        def __init_subclass__[T](
+            cls: type[T],
+        ) -> UpdateClass[Member[Literal["c"], V], *Attrs[T]]:
+            super().__init_subclass__()
+
+    class D[V](C[float]):
+        def __init_subclass__[T](
+            cls: type[T],
+        ) -> UpdateClass[Member[Literal["d"], V]]:
+            super().__init_subclass__()
+
+    attrs = eval_typing(Attrs[A[int]])
+    assert attrs == tuple[()]
+
+    attrs = eval_typing(Attrs[B[str]])
+    assert attrs == tuple[Member[Literal["a"], int, Never, Never, B[str]]]
+
+    attrs = eval_typing(Attrs[C[float]])
+    assert (
+        attrs
+        == tuple[
+            Member[Literal["a"], int, Never, Never, C[float]],
+            Member[Literal["b"], str, Never, Never, C[float]],
+        ]
+    )
+
+    attrs = eval_typing(Attrs[D[bool]])
+    assert (
+        attrs
+        == tuple[
+            Member[Literal["a"], int, Never, Never, D[bool]],
+            Member[Literal["b"], str, Never, Never, D[bool]],
+            Member[Literal["c"], float, Never, Never, D[bool]],
+        ]
+    )
+
+
+@pytest.mark.xfail(reason="Super sketchy....")
+def test_update_class_members_10():
+    # Generic classes which use other classes in their hierarchy
+    # within UpdateClass.
+    class A:
+        a: int
+
+        def __init_subclass__[T](
+            cls: type[T],
+        ) -> UpdateClass[
+            Member[Literal["b"], B[str]],
+            Member[Literal["c"], C[float]],
+            Member[Literal["d"], D[bool]],
+        ]:
+            super().__init_subclass__()
+
+    class B[T](A):
+        pass
+
+    class C[T](B[T]):
+        pass
+
+    class D[T](C[T]):
+        pass
+
+    attrs = eval_typing(Attrs[C[int]])
+    # A's __init_subclass__ adds Member["x", B[str]]; we get "a" from A and "x" from UpdateClass.
+    assert (
+        attrs
+        == tuple[
+            Member[Literal["a"], int, Never, Never, A],
+            Member[Literal["b"], B[str], Never, Never, C[int]],
+            Member[Literal["c"], C[float], Never, Never, C[int]],
+            Member[Literal["d"], D[bool], Never, Never, C[int]],
+        ]
+    )
+
+
 def test_update_class_inheritance_01():
     # current class init subclass is not applied
     class A:
@@ -2132,6 +2325,23 @@ def test_update_class_getarg_01():
     assert eval_typing(GetArg[C, B, Literal[0]]) is float
     assert eval_typing(GetArg[C, A, Literal[0]]) is int
     assert eval_typing(GetArg[C, A, Literal[1]]) is float
+
+
+@pytest.mark.xfail(reason="TODO")
+def test_update_class_empty_01():
+    class A:
+        a: int
+
+        def __init_subclass__[T](
+            cls: type[T],
+        ) -> UpdateClass[()]:
+            super().__init_subclass__()
+
+    class B(A):
+        b: int
+
+    attrs = eval_typing(Attrs[B])
+    assert attrs == tuple[()]
 
 
 ##############
