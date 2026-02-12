@@ -18,18 +18,21 @@ from typemap_extensions import (
     Bool,
     Length,
     GetArg,
+    GetInit,
     GetMemberType,
     GetName,
+    GetQuals,
     GetSpecialAttr,
     GetType,
-    GetInit,
     InitField,
     IsAssignable,
     Iter,
     IsEquivalent,
     Member,
+    Members,
     NewProtocol,
     Slice,
+    UpdateClass,
 )
 
 from . import format_helper
@@ -134,16 +137,39 @@ type DbType = DbBoolean | DbInteger | DbString | DbLinkTarget | DbLinkSource
 
 
 class Table[name: str]:
+    def __init_subclass__[T](
+        cls: type[T],
+    ) -> UpdateClass[
+        *[
+            Member[
+                GetName[m],
+                _Field[
+                    GetArg[GetType[m], Field, Literal[0]],
+                    T,
+                    GetName[m],
+                ],
+                GetQuals[m],
+                GetInit[m],
+            ]
+            for m in Iter[Members[T]]
+            if IsAssignable[GetType[m], Field]
+        ],
+        *[m for m in Iter[Members[T]] if not IsAssignable[GetType[m], Field]],
+    ]:
+        super().__init_subclass__()
+
+
+class Field[PyType]:
     pass
 
 
-class Field[Table, Name, PyType]:
+class _Field[PyType, Table, Name]:
     def __lt__(self, other: Any) -> Filter[Table]: ...
 
 
-type FieldTable[T] = GetArg[T, Field, Literal[0]]
-type FieldName[T] = GetArg[T, Field, Literal[1]]
-type FieldPyType[T] = GetArg[T, Field, Literal[2]]
+type FieldPyType[T] = GetArg[T, _Field, Literal[0]]
+type FieldTable[T] = GetArg[T, _Field, Literal[1]]
+type FieldName[T] = GetArg[T, _Field, Literal[2]]
 
 
 class ColumnArgs(TypedDict, total=False):
@@ -236,7 +262,7 @@ type MakeQueryEntryAllFields[T: Table] = QueryEntry[
         *[
             GetName[m]
             for m in Iter[Attrs[T]]
-            if IsAssignable[GetType[m], Field]
+            if IsAssignable[GetType[m], _Field]
         ],
     ],
 ]
@@ -249,7 +275,7 @@ type MakeQueryEntryNamedFields[
         *[
             GetName[m]
             for m in Iter[Attrs[T]]
-            if IsAssignable[GetType[m], Field]
+            if IsAssignable[GetType[m], _Field]
             and any(
                 IsAssignable[FieldName[GetType[m]], f] for f in Iter[FieldNames]
             )
@@ -268,7 +294,7 @@ type AddTable[Entries, New: Table] = tuple[
         else [MakeQueryEntryAllFields[New]]
     ),
 ]
-type AddField[Entries, New: Field] = tuple[
+type AddField[Entries, New: _Field] = tuple[
     *[  # Existing entries
         (
             e  # Non-matching entry
@@ -286,7 +312,7 @@ type AddField[Entries, New: Field] = tuple[
         if not Bool[EntriesHasTable[Entries, FieldTable[New]]]
     ),
 ]
-type AddEntries[Entries, News: tuple[Table | Field, ...]] = (
+type AddEntries[Entries, News: tuple[Table | _Field, ...]] = (
     Entries
     if IsAssignable[Length[News], Literal[0]]
     else AddEntries[
@@ -351,50 +377,44 @@ class Session:
 
 
 class User(Table[Literal["users"]]):
-    id: Field[User, Literal["id"], int] = column(
+    id: Field[int] = column(
         db_type=DbInteger(), primary_key=True, autoincrement=True
     )
-    name: Field[User, Literal["name"], str] = column(
-        db_type=DbString(length=150), nullable=False
-    )
-    email: Field[User, Literal["email"], str] = column(
+    name: Field[str] = column(db_type=DbString(length=150), nullable=False)
+    email: Field[str] = column(
         db_type=DbString(length=100), unique=True, nullable=False
     )
-    age: Field[User, Literal["age"], int | None] = column(db_type=DbInteger())
-    active: Field[User, Literal["active"], bool] = column(
+    age: Field[int | None] = column(db_type=DbInteger())
+    active: Field[bool] = column(
         db_type=DbBoolean(), default=True, nullable=False
     )
-    posts: Field[User, Literal["posts"], list[Post]] = column(
+    posts: Field[list[Post]] = column(
         db_type=DbLinkSource(source="Post", cardinality=Cardinality.MANY)
     )
 
 
 class Post(Table[Literal["posts"]]):
-    id: Field[Post, Literal["id"], int] = column(
+    id: Field[int] = column(
         db_type=DbInteger(), primary_key=True, autoincrement=True
     )
-    content: Field[Post, Literal["content"], str] = column(
-        db_type=DbString(length=1000), nullable=False
-    )
-    author: Field[Post, Literal["author"], User] = column(
+    content: Field[str] = column(db_type=DbString(length=1000), nullable=False)
+    author: Field[User] = column(
         db_type=DbLinkTarget(target=User), nullable=False
     )
-    comments: Field[Post, Literal["comments"], list[Comment]] = column(
+    comments: Field[list[Comment]] = column(
         db_type=DbLinkSource(source="Comment", cardinality=Cardinality.MANY)
     )
 
 
 class Comment(Table[Literal["comments"]]):
-    id: Field[Comment, Literal["id"], int] = column(
+    id: Field[int] = column(
         db_type=DbInteger(), primary_key=True, autoincrement=True
     )
-    content: Field[Comment, Literal["content"], str] = column(
-        db_type=DbString(length=1000), nullable=False
-    )
-    author: Field[Comment, Literal["author"], User] = column(
+    content: Field[str] = column(db_type=DbString(length=1000), nullable=False)
+    author: Field[User] = column(
         db_type=DbLinkTarget(target=User), nullable=False
     )
-    post: Field[Comment, Literal["post"], Post] = column(
+    post: Field[Post] = column(
         db_type=DbLinkTarget(target=Post), nullable=False
     )
 
