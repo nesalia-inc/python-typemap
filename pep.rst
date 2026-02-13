@@ -338,7 +338,8 @@ main part of this proposal.
 Unpack of typevars for ``**kwargs``
 -----------------------------------
 
-A minor proposal that could be split out maybe:
+A minor proposal that can probably be split off into a typing proposal
+without a PEP:
 
 Supporting ``Unpack`` of typevars for ``**kwargs``::
 
@@ -390,6 +391,13 @@ support processing ``**kwargs`` with type level computation.
 
 Extended Callables, take 2
 --------------------------
+
+We introduce a new extended callable proposal for expressing arbitrary
+complex callable types. The goal here is not really to produce a new
+syntax to write in annotations (it seems less pleasant to write than
+callback protocols are), but to provide a way of contructing the types
+that is amenable to creating and introspecting callable types using
+the other features of this PEP.
 
 We introduce a ``Param`` type that contains all the information about a function param::
 
