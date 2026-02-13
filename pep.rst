@@ -799,7 +799,7 @@ values too?
 .. _generic-callable:
 
 Generic Callable
-""""""""""""""""
+''''''''''''''''
 
 * ``GenericCallable[Vs, lambda <vs>: Ty]``: A generic callable. ``Vs`` are a tuple
   type of unbound type variables and ``Ty`` should be a ``Callable``,
@@ -819,7 +819,7 @@ TODO: Decide if we have any mechanisms to inspect/destruct
 maybe can apply it to concrete types?
 
 Overloaded function types
-"""""""""""""""""""""""""
+'''''''''''''''''''''''''
 
 * ``Overloaded[*Callables]`` - An overloaded function type, with the
   underlying types in order.
@@ -1319,38 +1319,7 @@ Support dot notation to access ``Member`` components
 ----------------------------------------------------
 
 Code would read quite a bit nicer if we could write ``m.name`` instead
-of ``GetName[m]``. A general mechanism to support that might look
-like::
-
-    class Member[N: str, T, Q: MemberQuals = typing.Never, I = typing.Never, D = typing.Never]:
-        type name = N
-        type tp = T
-        type quals = Q
-        type init = I
-        type definer = D
-
-We considered this but rejected it due to runtime implementation
-concerns: an expression like ``Member[Literal["x"], int].name`` would
-need to return an object that captures both the content of the type
-alias while maintaining the ``_GenericAlias`` of the applied class so
-that type variables may be substituted for.
-
-We were mistaken about the runtime evaluation difficulty,
-though: if we required a special base class in order for a type to use
-this feature, it should work without too much trouble, and without
-causing any backporting or compatibility problems.
-
-We wouldn't be able to have the operation lift over unions or the like
-(unless we were willing to modify ``__getattr__`` for
-``types.UnionType`` and ``typing._UnionGenericAlias`` to do so!)
-
-That just leaves semantic and philosophical concerns: it arguably makes
-the model more complicated, but a lot of code will read much nicer.
-
-Another option would be to skip introducing a general mechanism (for
-now, at least), but at least make dot notation work on ``Member``,
-which will be extremely common.
-
+of ``GetName[m]``.
 With dot notation, ``PropsOnly`` (from
 :ref:`the query builder example <qb-impl>`) would look like::
 
@@ -1361,6 +1330,56 @@ With dot notation, ``PropsOnly`` (from
             if typing.IsAssignable[p.type, Property]
         ]
     ]
+
+Which is a fair bit nicer.
+
+
+We considered this but initially rejected it in part due to runtime
+implementation concerns: an expression like ``Member[Literal["x"],
+int].name`` would need to return an object that captures both the
+content of the type alias while maintaining the ``_GenericAlias`` of
+the applied class so that type variables may be substituted for.
+
+We were mistaken about the runtime evaluation difficulty,
+though: if we required a special base class in order for a type to use
+this feature, it should work without too much trouble, and without
+causing any backporting or compatibility problems.
+
+We wouldn't be able to have the operation lift over unions or the like
+(unless we were willing to modify ``__getattr__`` for
+``types.UnionType`` and ``typing._UnionGenericAlias`` to do so!)
+
+Or maybe it would be fine to have it only work on variables, and then
+no special support would be required at the definition site.
+
+That just leaves semantic and philosophical concerns: it arguably makes
+the model more complicated, but a lot of code will read much nicer.
+
+What would the mechanism be?
+''''''''''''''''''''''''''''
+
+A general mechanism to support this might look
+like::
+
+    class Member[
+        N: str,
+        T,
+        Q: MemberQuals = typing.Never,
+        I = typing.Never,
+        D = typing.Never
+    ]:
+        type name = N
+        type tp = T
+        type quals = Q
+        type init = I
+        type definer = D
+
+Where ``type`` aliases defined in a class can be accessed by dot notation.
+
+
+Another option would be to skip introducing a general mechanism (for
+now, at least), but at least make dot notation work on ``Member`` and
+``Param``, which will be extremely common.
 
 
 Dictionary comprehension based syntax for creating typed dicts and protocols
@@ -1394,6 +1413,12 @@ annotation expression in an arm of a conditional type?
 
 The main downside of this proposal is just complexity: it requires
 introducing another kind of weird type form.
+
+We'd also need to figure out the exact interaction between typeddicts
+and new protocols. Would the dictionary syntax always produce a typed
+dict, and then ``NewProtocol`` converts it to a protocol, or would
+``NewProtocol[<dict type expr>]`` be a special form? Would we try to
+allow ``ClassVar`` and ``Final``?
 
 Destructuring?
 ''''''''''''''
@@ -1431,7 +1456,7 @@ Call type operators using parens
 --------------------------------
 
 If people are having a bad time in Bracket City, we could also
-consider making the builtin type operators use parens instead of
+consider making the built-in type operators use parens instead of
 brackets.
 
 Obviously this has some consistency issues but also maybe signals a
