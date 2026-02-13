@@ -875,11 +875,18 @@ base classes and type decorators that do ``dataclass`` like things.
   This can only be used in the return type of a type decorator
   or as the return type of ``__init_subclass__``.
 
+  When a class is declared, if one or more of its ancestors have an
+  ``__init_subclass__`` with an ``UpdateClass`` return type, they are
+  applied in reverse MRO order. N.B: If the ``cls`` param is
+  parameterized by ``type[T]]``, then the class type should
+  substituted in for ``T``.
+
 One snag here: it introduces type-evaluation-order dependence; if the
 ``UpdateClass`` return type for some ``__init_subclass__`` inspects
 some unrelated class's ``Members`` , and that class also has an
-``__init_subclass__``, then the results might depend on what order they
-are evaluated.
+``__init_subclass__``, then the results might depend on what order
+they are evaluated.  Ideally this kind of case would be rejected,
+which I think ought to be possible?
 
 This does actually exactly mirror a potential **runtime**
 evaluation-order dependence, though.
