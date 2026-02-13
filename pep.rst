@@ -8,7 +8,7 @@ Status: Draft
 Type: Standards Track
 Topic: Typing
 Created: <date created on, in dd-mmm-yyyy format>
-Python-Version: 3.15 or 3.16
+Python-Version: 3.15
 Post-History: Pending
 Resolution: <url>
 
