@@ -496,6 +496,9 @@ imported qualified or with some other name)
         # *[... for t in ...] arguments
         | <ident>[<variadic-type-arg> +]
 
+        # Type member access (associated type access?)
+        | <type>.<name>
+
         | GenericCallable[<type>, lambda <args>: <type>]
 
    # Type conditional checks are boolean compositions of
@@ -524,8 +527,8 @@ imported qualified or with some other name)
 (``<type-bool-for>`` is identical to ``<type-for>`` except that the
 result type is a ``<type-bool>`` instead of a ``<type>``.)
 
-There are three core syntactic features introduced: type booleans,
-conditional types and unpacked comprehension types.
+There are three and a half core syntactic features introduced: type booleans,
+conditional types, unpacked comprehension types, and type member access.
 
 :ref:`"Generic callables" <generic-callable>` are also technically a
 syntactic feature, but are discussed as an operator.
@@ -571,6 +574,18 @@ comprehension iterating over the arguments of tuple type ``iter_ty``.
 
 The comprehension may also have ``if`` clauses, which filter in the
 usual way.
+
+Type member access
+''''''''''''''''''
+
+The ``Member`` and ``Param`` types introduced to represent class
+members and function params have "associated" type members, which can
+be accessed by dot notation: ``m.name``, ``m.type``, etc.
+
+This operation is not lifted over union types. Using it on the wrong
+sort of type will be an error. (At least, it must be that way at
+runtime, and we probably want typechecking to match.)
+
 
 Type operators
 --------------
@@ -674,13 +689,14 @@ Object inspection
   of classes.  Its type parameters encode the information about each
   member.
 
-  * ``N`` is the name, as a literal string type
-  * ``T`` is the type
-  * ``Q`` is a union of qualifiers (see ``MemberQuals`` below)
+  * ``N`` is the name, as a literal string type. Accessable with ``.name``.
+  * ``T`` is the type. Accessable with ``.type``.
+  * ``Q`` is a union of qualifiers (see ``MemberQuals`` below). Accessable with ``.quals``.
   * ``Init`` is the literal type of the attribute initializer in the
-    class (see :ref:`InitField <init-field>`)
+    class (see :ref:`InitField <init-field>`). Accessable with ``.init``.
   * ``D`` is the defining class of the member. (That is, which class
-    the member is inherited from. Always ``Never``, for a ``TypedDict``)
+    the member is inherited from. Always ``Never``, for a ``TypedDict``).
+    Accessable with ``.definer``.
 
 * ``MemberQuals = Literal['ClassVar', 'Final', 'NotRequired', 'ReadOnly']`` -
   ``MemberQuals`` is the type of "qualifiers" that can apply to a
@@ -693,16 +709,6 @@ extended callables, and carrying the ``ClassVar``
 qualifier. ``staticmethod`` and ``classmethod`` will return
 ``staticmethod`` and ``classmethod`` types, which are subscriptable as
 of 3.14.
-
-We also have helpers for extracting the fields of ``Members``; they
-are all definable in terms of ``GetArg``. (Some of them are shared
-with ``Param``, discussed below.)
-
-* ``GetName[T: Member | Param]``
-* ``GetType[T: Member | Param]``
-* ``GetQuals[T: Member | Param]``
-* ``GetInit[T: Member]``
-* ``GetDefiner[T: Member]``
 
 All of the operators in this section are :ref:`lifted over union types
 <lifting>`.
@@ -795,10 +801,10 @@ Callable inspection and creation
 ``Callable`` types always have their arguments exposed in the extended
 Callable format discussed above.
 
-The names, type, and qualifiers share getter operations with
-``Member``.
+The names, type, and qualifiers share associated type names with
+``Member`` (``.name``, ``.type``, and ``.quals``).
 
-TODO: Should we make ``GetInit`` be literal types of default parameter
+TODO: Should we make ``.init`` be literal types of default parameter
 values too?
 
 .. _generic-callable:
@@ -947,8 +953,7 @@ those cases, we add a new hook to ``typing``:
   it before being returned.
 
   If set to ``None`` (the default), the boolean operators will return
-  ``False`` while ``Iter`` will evaluate to
-  ``iter(typing.TypeVarTuple("_IterDummy"))``.
+  ``False`` while ``Iter`` will evaluate to ``iter(())``.
 
 
 There has been some discussion of adding a ``Format.AST`` mode for
@@ -997,7 +1002,7 @@ The ``**kwargs: Unpack[K]`` is part of this proposal, and allows
 type-annotated attribute of ``K``, while calling ``NewProtocol`` with
 ``Member`` arguments constructs a new structural type.
 
-``GetName`` is a getter operator that fetches the name of a ``Member``
+``c.name`` fetches the name of the ``Member`` bound to the variable ``c``
 as a literal type--all of these mechanisms lean very heavily on literal types.
 ``GetMemberType`` gets the type of an attribute from a class.
 
@@ -1011,8 +1016,8 @@ as a literal type--all of these mechanisms lean very heavily on literal types.
         typing.NewProtocol[
             *[
                 typing.Member[
-                    typing.GetName[c],
-                    ConvertField[typing.GetMemberType[ModelT, typing.GetName[c]]],
+                    c.name,
+                    ConvertField[typing.GetMemberType[ModelT, c.name]],
                 ]
                 for c in typing.Iter[typing.Attrs[K]]
             ]
@@ -1066,9 +1071,9 @@ contains all the ``Property`` attributes of ``T``.
 
     type PropsOnly[T] = typing.NewProtocol[
         *[
-            typing.Member[typing.GetName[p], PointerArg[typing.GetType[p]]]
+            typing.Member[p.name, PointerArg[p.type]]
             for p in typing.Iter[typing.Attrs[T]]
-            if typing.IsAssignable[typing.GetType[p], Property]
+            if typing.IsAssignable[p.type, Property]
         ]
     ]
 
@@ -1098,15 +1103,15 @@ suite, but here is a possible implementation of just ``Public``
     type Create[T] = typing.NewProtocol[
         *[
             typing.Member[
-                typing.GetName[p],
-                typing.GetType[p],
-                typing.GetQuals[p],
-                GetDefault[typing.GetInit[p]],
+                p.name,
+                p.type,
+                p.quals,
+                GetDefault[p.init],
             ]
             for p in typing.Iter[typing.Attrs[T]]
             if not typing.IsAssignable[
                 Literal[True],
-                GetFieldItem[typing.GetInit[p], Literal["primary_key"]],
+                GetFieldItem[p.init, Literal["primary_key"]],
             ]
         ]
     ]
@@ -1138,13 +1143,13 @@ dataclasses-style method generation
                 typing.Param[Literal["self"], Self],
                 *[
                     typing.Param[
-                        typing.GetName[p],
-                        typing.GetType[p],
+                        p.name,
+                        p.type,
                         # All arguments are keyword-only
                         # It takes a default if a default is specified in the class
                         Literal["keyword"]
                         if typing.IsAssignable[
-                            GetDefault[typing.GetInit[p]],
+                            GetDefault[p.init],
                             Never,
                         ]
                         else Literal["keyword", "default"],
@@ -1325,75 +1330,6 @@ AKA '"Rejected" Ideas That Maybe We Should Actually Do?'
 
 Very interested in feedback about these!
 
-The first one in particular I think has a lot of upside.
-
-Support dot notation to access ``Member`` components
-----------------------------------------------------
-
-Code would read quite a bit nicer if we could write ``m.name`` instead
-of ``GetName[m]``.
-With dot notation, ``PropsOnly`` (from
-:ref:`the query builder example <qb-impl>`) would look like::
-
-    type PropsOnly[T] = typing.NewProtocol[
-        *[
-            typing.Member[p.name, PointerArg[p.type]]
-            for p in typing.Iter[typing.Attrs[T]]
-            if typing.IsAssignable[p.type, Property]
-        ]
-    ]
-
-Which is a fair bit nicer.
-
-
-We considered this but initially rejected it in part due to runtime
-implementation concerns: an expression like ``Member[Literal["x"],
-int].name`` would need to return an object that captures both the
-content of the type alias while maintaining the ``_GenericAlias`` of
-the applied class so that type variables may be substituted for.
-
-We were mistaken about the runtime evaluation difficulty,
-though: if we required a special base class in order for a type to use
-this feature, it should work without too much trouble, and without
-causing any backporting or compatibility problems.
-
-We wouldn't be able to have the operation lift over unions or the like
-(unless we were willing to modify ``__getattr__`` for
-``types.UnionType`` and ``typing._UnionGenericAlias`` to do so!)
-
-Or maybe it would be fine to have it only work on variables, and then
-no special support would be required at the definition site.
-
-That just leaves semantic and philosophical concerns: it arguably makes
-the model more complicated, but a lot of code will read much nicer.
-
-What would the mechanism be?
-''''''''''''''''''''''''''''
-
-A general mechanism to support this might look
-like::
-
-    class Member[
-        N: str,
-        T,
-        Q: MemberQuals = typing.Never,
-        I = typing.Never,
-        D = typing.Never
-    ]:
-        type name = N
-        type tp = T
-        type quals = Q
-        type init = I
-        type definer = D
-
-Where ``type`` aliases defined in a class can be accessed by dot notation.
-
-
-Another option would be to skip introducing a general mechanism (for
-now, at least), but at least make dot notation work on ``Member`` and
-``Param``, which will be extremely common.
-
-
 Dictionary comprehension based syntax for creating typed dicts and protocols
 ----------------------------------------------------------------------------
 
@@ -1486,6 +1422,38 @@ difference? Combined with dictionary-comprehensions and dot notation
 (The user-defined type alias ``PointerArg`` still must be called with
 brackets, despite being basically a helper operator.)
 
+Have a general mechanism for dot-notation accessible associated types
+---------------------------------------------------------------------
+
+The main proposal is currently silent about exactly *how* ``Member``
+and ``Param`` will have associated types for ``.name`` and ``.type``.
+
+We could just make it work for those particular types, or we could
+introduce a general mechansim that might look something like::
+
+    @typing.has_associated_types
+    class Member[
+        N: str,
+        T,
+        Q: MemberQuals = typing.Never,
+        I = typing.Never,
+        D = typing.Never
+    ]:
+        type name = N
+        type tp = T
+        type quals = Q
+        type init = I
+        type definer = D
+
+
+The decorator (or a base class) is needed if we want the dot notation
+for the associated types to be able to work at runtime, since we need
+to customize the behavior of ``__getattr__`` on the
+``typing._GenericAlias`` produced by the class so that it captures
+both the type parameters to ``Member`` and the alias.
+
+(Though possibly we could change the behavior of ``_GenericAlias``
+itself to avoid the need for that.)
 
 Rejected Ideas
 ==============
@@ -1566,6 +1534,35 @@ worse. Supporting filtering while mapping would make it even more bad
 (maybe an extra argument for a filter?).
 
 We can explore other options too if needed.
+
+
+Don't use dot notation to access ``Member`` components
+------------------------------------------------------
+
+Earlier versions of this PEP draft omitted the ability to write
+``m.name`` and similar on ``Member`` and ``Param`` components, and
+instead relied on helper operators such as ``typing.GetName`` (that
+could be implemented under the hood using ``typing.GetArg`` or
+``typing.GetMemberType``).
+
+The potential advantage here is reducing the number of new constructs
+being added to the type language, and avoiding needing to either
+introduce a new general mechanism for associated types or having a
+special-case for ``Member``.
+
+``PropsOnly`` (from :ref:`the query builder example <qb-impl>`) would
+look like::
+
+    type PropsOnly[T] = typing.NewProtocol[
+        *[
+            typing.Member[typing.GetName[p], PointerArg[typing.GetType[p]]]
+            for p in typing.Iter[typing.Attrs[T]]
+            if typing.IsAssignable[typing.GetType[p], Property]
+        ]
+    ]
+
+Everyone hated how this looked a lot.
+
 
 Perform type manipulations with normal Python functions
 -------------------------------------------------------
