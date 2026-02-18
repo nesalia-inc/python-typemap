@@ -1244,7 +1244,7 @@ This could be mitigated by doing one of:
  2. Adding a ``Format.AST`` mode for
     fetching annotations (see this `PEP draft <#ast_format_>`_)
 
-If neither of those options are taken, then tools that want to process
+If neither of those options is taken, then tools that want to process
 unevaluated type manipulation expressions will probably need to
 reparse the source code and extract annotations from there.
 
