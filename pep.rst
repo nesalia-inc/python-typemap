@@ -345,7 +345,7 @@ Extended Callables, take 2
 We introduce a new extended callable proposal for expressing arbitrary
 complex callable types. The goal here is not really to produce a new
 syntax to write in annotations (it seems less pleasant to write than
-callback protocols are), but to provide a way of contructing the types
+callback protocols are), but to provide a way of constructing the types
 that is amenable to creating and introspecting callable types using
 the other features of this PEP.
 
@@ -512,7 +512,7 @@ The type ``true_typ if bool_typ else false_typ`` is a conditional
 type, which resolves to ``true_typ`` if ``bool_typ`` is equivalent to
 ``Literal[True]`` and to ``false_typ`` otherwise.
 
-``bool_typ`` is a type, but it needs syntactically be a type boolean,
+``bool_typ`` is a type, but it needs to syntactically be a type boolean,
 defined above.
 
 .. _unpacked:
@@ -628,7 +628,7 @@ Object inspection
 * ``Members[T]``: produces a ``tuple`` of ``Member`` types describing
   the members (attributes and methods) of class or typed dict ``T``.
 
-  In order to allow typechecking time and runtime evaluation coincide
+  In order to allow typechecking time and runtime evaluation to coincide
   more closely, **only members with explicit type annotations are included**.
 
 * ``Attrs[T]``: like ``Members[T]`` but only returns attributes (not
@@ -642,14 +642,14 @@ Object inspection
   of classes.  Its type parameters encode the information about each
   member.
 
-  * ``N`` is the name, as a literal string type. Accessable with ``.name``.
-  * ``T`` is the type. Accessable with ``.type``.
-  * ``Q`` is a union of qualifiers (see ``MemberQuals`` below). Accessable with ``.quals``.
+  * ``N`` is the name, as a literal string type. Accessible with ``.name``.
+  * ``T`` is the type. Accessible with ``.type``.
+  * ``Q`` is a union of qualifiers (see ``MemberQuals`` below). Accessible with ``.quals``.
   * ``Init`` is the literal type of the attribute initializer in the
-    class (see :ref:`InitField <init-field>`). Accessable with ``.init``.
+    class (see :ref:`InitField <init-field>`). Accessible with ``.init``.
   * ``D`` is the defining class of the member. (That is, which class
     the member is inherited from. Always ``Never``, for a ``TypedDict``).
-    Accessable with ``.definer``.
+    Accessible with ``.definer``.
 
 * ``MemberQuals = Literal['ClassVar', 'Final', 'NotRequired', 'ReadOnly']`` -
   ``MemberQuals`` is the type of "qualifiers" that can apply to a
@@ -673,7 +673,12 @@ Object creation
   specified by ``Member`` arguments
 
 * ``NewProtocolWithBases[Bases: tuple[type], *Ms: Member]`` - A variant that
-  allows specifying bases too. TODO: Is this something we actually want?
+  allows specifying bases too. The idea is that a type would satisfy
+  this protocol if it extends all of the given bases and has the
+  specified members. (TODO: Is this something we actually
+  want? It would would be a potentially powerful feature for dealing
+  with things like Pydantic models, but protocol-with-bases would be
+  something of a new concept.)
 
 * ``NewTypedDict[*Ps: Member]`` - Creates a new ``TypedDict`` with
   items specified by the ``Member`` arguments. TODO: Do we want a way
@@ -837,7 +842,7 @@ base classes and type decorators that do ``dataclass`` like things.
   When a class is declared, if one or more of its ancestors have an
   ``__init_subclass__`` with an ``UpdateClass`` return type, they are
   applied in reverse MRO order. N.B: If the ``cls`` param is
-  parameterized by ``type[T]]``, then the class type should
+  parameterized by ``type[T]``, then the class type should be
   substituted in for ``T``.
 
 One snag here: it introduces type-evaluation-order dependence; if the
@@ -886,13 +891,14 @@ Runtime evaluation support
 --------------------------
 
 An important goal is supporting runtime evaluation of these computed
-types.  We do not propose to add an official evaluator to the standard
+types.  We **do not** propose to add an official evaluator to the standard
 library, but intend to release a third-party evaluator library.
 
 While most of the extensions to the type system are "inert" type
-operator applications, the syntax also includes list iteration and
-conditionals, which will be automatically evaluated when the
-``__annotate__`` method of a class, alias, or function is called.
+operator applications, the syntax also includes list iteration,
+conditionals, and attribute access, which will be automatically
+evaluated when the ``__annotate__`` method of a class, alias, or
+function is called.
 
 In order to allow an evaluator library to trigger type evaluation in
 those cases, we add a new hook to ``typing``:
@@ -1073,7 +1079,7 @@ The ``Create`` type alias creates a new type (via ``NewProtocol``) by
 iterating over the attributes of the original type.  It has access to
 names, types, qualifiers, and the literal types of initializers (in
 part through new facilities to handle the extremely common
-``= Field(...)`` like pattern used here.
+``= Field(...)``-like pattern used here).
 
 Here, we filter out attributes that have ``primary_key=True`` in their
 ``Field`` as well as extracting default arguments (which may be either
@@ -1149,6 +1155,10 @@ I am proposing a fully new extended callable syntax because:
     closely mimic the ``mypy_extensions`` version though, if something new
     is a non starter)
 
+TODO: Currently I made the qualifiers be short strings, for code brevity
+when using them, but an alternate approach would be to mirror
+``inspect.Signature`` more directly, and have an enum with names like
+``ParamKind.POSITIONAL_OR_KEYWORD``.
 
 .. _generic-callable-rationale:
 
@@ -1162,7 +1172,7 @@ Consider a method with the following signature::
 
 The type of the method is generic, and the generic is bound at the
 **method**, not the class. We need a way to represent such a generic
-function both as a programmer might write it for a ``NewProtocol``.
+function as a programmer might write it for a ``NewProtocol``.
 
 One option that is somewhat appealing but doesn't work would be to use
 unbound type variables and let them be generalized::
@@ -1226,6 +1236,9 @@ like mapped types are unmentioned in current documentation
 Reference Implementation
 ========================
 
+There is a demo of a runtime evaluator [#runtime]_, which is
+also where this PEP draft currently lives.
+
 There is an in-progress proof-of-concept implementation in mypy [#ref-impl]_.
 
 It can type check the ORM and FastAPI-style model derivation
@@ -1233,8 +1246,6 @@ examples.
 
 It is missing support for callables, ``UpdateClass``, annotation
 processing, and various smaller things.
-
-There is a demo of a runtime evaluator as well [#runtime]_.
 
 Alternate syntax ideas
 ======================
@@ -1342,7 +1353,7 @@ The main proposal is currently silent about exactly *how* ``Member``
 and ``Param`` will have associated types for ``.name`` and ``.type``.
 
 We could just make it work for those particular types, or we could
-introduce a general mechansim that might look something like::
+introduce a general mechanism that might look something like::
 
     @typing.has_associated_types
     class Member[
@@ -1374,15 +1385,48 @@ Rejected Ideas
 Renounce all cares of runtime evaluation
 ----------------------------------------
 
-This would have a lot of simplifying features.
+This would give us more flexibility to experiment with syntactic
+forms, and would allow us to dispense with some ugliness such as
+requiring ``typing.Iter`` in unpacked comprehension types and having a
+limited set of ``<type-bool>`` expressions that can appear in
+conditional types.
 
-TODO: Expand
+For better or worse, though, runtime use of type annotations is
+widespread, and one of our motivating examples (automatically deriving
+FastAPI CRUD models) depends on it.
 
 Support TypeScript style pattern matching in subtype checking
 -------------------------------------------------------------
 
-This would almost certainly only be possible if we also decide not to
-care about runtime evaluation, as above.
+In TypeScript, conditional types are formed like::
+
+    SomeType extends OtherType ? TrueType : FalseType
+
+What's more, the right hand side of the check allows binding type
+variables based on pattern matching, using the ``infer`` keyword, like
+this example that extracts the element type of an array::
+
+    type ArrayArg<T> = T extends [infer El] ? El : never;
+
+This is a very elegant mechanism, especially in the way that it
+eliminates the need for ``typing.GetArg`` and its subtle ``Base``
+parameter.
+
+Unfortunately it seems very difficult to shoehorn into Python's
+existing syntax in any sort of satisfactory way, especially because of
+the subtle binding structure.
+
+Perhaps the most plausible variant would be something like::
+
+    type ArrayArg[T] = El if IsAssignable[T, list[Infer[El]]] else Never
+
+Then, if we wanted to evaluate it at runtime, we'd need to do
+something gnarly involving a custom ``globals`` environment that
+catches the unbound ``Infer`` arguments.
+
+Additionally, without major syntactic changes (using type operators
+instead of ternary), we wouldn't be able to match TypeScript's
+behavior of lifting the conditional over unions.
 
 
 Replace ``IsAssignable`` with something weaker than "assignable to" checking
@@ -1409,44 +1453,6 @@ We decided it probably was not a good idea to introduce a new notion
 that is similar to but not the same as subtyping, and that would need
 to either have a long and weird name like ``IsAssignableSimilar`` or a
 misleading short one like ``IsAssignable``.
-
-.. _less_syntax:
-
-
-Use type operators for conditional and iteration
-------------------------------------------------
-
-Instead of writing:
- * ``tt if tb else tf``
- * ``*[tres for T in Iter[ttuple]]``
-
-we could use type operator forms like:
- * ``Cond[tb, tt, tf]``
- * ``UnpackMap[ttuple, lambda T: tres]``
- * or ``UnpackMap[ttuple, T, tres]`` where ``T`` must be a declared
-   ``TypeVar``
-
-Boolean operations would likewise become operators (``Not``, ``And``,
-etc).
-
-The advantage of this is that constructing a type annotation never
-needs to do non-trivial computation, and thus we don't need
-:ref:`runtime hooks <rt-support>` to support evaluating them.
-
-It would also mean that it would be much easier to extract the raw
-type annotation.  (The lambda form would still be somewhat fiddly.
-The non-lambda form would be trivial to extract, but requiring the
-declaration of a ``TypeVar`` goes against the grain of recent
-changes.)
-
-Another advantage is not needing any notion of a special
-``<type-bool>`` class of types.
-
-The disadvantage is that is that the syntax seems a *lot*
-worse. Supporting filtering while mapping would make it even more bad
-(maybe an extra argument for a filter?).
-
-We can explore other options too if needed.
 
 
 Don't use dot notation to access ``Member`` components
@@ -1476,6 +1482,44 @@ look like::
 
 Everyone hated how this looked a lot.
 
+.. _less_syntax:
+
+
+Use type operators for conditional and iteration
+------------------------------------------------
+
+Instead of writing:
+ * ``tt if tb else tf``
+ * ``*[tres for T in Iter[ttuple]]``
+
+we could use type operator forms like:
+ * ``Cond[tb, tt, tf]``
+ * ``UnpackMap[ttuple, lambda T: tres]``
+ * or ``UnpackMap[ttuple, T, tres]`` where ``T`` must be a declared
+   ``TypeVar``
+
+Boolean operations would likewise become operators (``Not``, ``And``,
+etc).
+
+The advantage of this is that constructing a type annotation never
+needs to do non-trivial computation (assuming we also get rid of dot
+notation), and thus we don't need :ref:`runtime hooks <rt-support>` to
+support evaluating them.
+
+It would also mean that it would be much easier to extract the raw
+type annotation.  (The lambda form would still be somewhat fiddly.
+The non-lambda form would be trivial to extract, but requiring the
+declaration of a ``TypeVar`` goes against the grain of recent
+changes.)
+
+Another advantage is not needing any notion of a special
+``<type-bool>`` class of types.
+
+The disadvantage is that is that the syntax seems a *lot*
+worse. Supporting filtering while mapping would make it even more bad
+(maybe an extra argument for a filter?).
+
+We can explore other options too if needed.
 
 Perform type manipulations with normal Python functions
 -------------------------------------------------------
@@ -1494,7 +1538,7 @@ types would be quite a bit *more* complicated.
 
 It would require a well-defined and safe-to-run subset of the language
 (and standard library) to be defined that could be run from within
-typecheckers. Subsets like this have been defined in other system
+typecheckers. Subsets like this have been defined in other systems
 (see `Starlark <#starlark_>`_, the configuration language for Bazel),
 but it's still a lot of surface area, and programmers would need to
 keep in mind the boundaries of it.
@@ -1559,7 +1603,7 @@ arguments invariantly.
 Acknowledgements
 ================
 
-Jukka Lehtosalo
+Jukka Lehtosalo, etc
 
 [Thank anyone who has helped with the PEP.]
 
