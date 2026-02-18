@@ -173,7 +173,7 @@ and to perform validation/filtering of the data in the endpoint::
         secret_name: str | None = None
 
 
-The ``HeroPublic`` type is used as the return types of the read
+The ``HeroPublic`` type is used as the return type of the read
 endpoint (and is validated while being output, including having extra
 fields stripped), while ``HeroCreate`` and ``HeroUpdate`` serve as
 input types (automatically converted from JSON and validated based on
@@ -342,7 +342,7 @@ support processing ``**kwargs`` with type level computation.
 Extended Callables, take 2
 --------------------------
 
-We introduce a new extended callable proposal for expressing arbitrary
+We introduce a new extended callable proposal for expressing arbitrarily
 complex callable types. The goal here is not really to produce a new
 syntax to write in annotations (it seems less pleasant to write than
 callback protocols are), but to provide a way of constructing the types
@@ -573,7 +573,7 @@ Basic operators
 
 * ``GetArg[T, Base, Idx: Literal[int]]``: returns the type argument
   number ``Idx`` to ``T`` when interpreted as ``Base``, or ``Never``
-  if it cannot be. (That is, if we have  ``class A(B[C]): ...``, then
+  if it cannot be. (That is, if we have ``class A(B[C]): ...``, then
   ``GetArg[A, B, 0] == C`` while ``GetArg[A, A, 0] == Never``).
 
   Negative indexes work in the usual way.
@@ -600,7 +600,7 @@ Basic operators
 
 
 * ``GetSpecialAttr[T: type, Attr: Literal[str]]``: Extracts the value
-  of special attribute named ``Attr`` from the class ``T``. Valid
+  of the special attribute named ``Attr`` from the class ``T``. Valid
   attributes are ``__name__``, ``__module__``, and ``__qualname__``.
   Returns the value as a ``Literal[str]``.
 
@@ -676,7 +676,7 @@ Object creation
   allows specifying bases too. The idea is that a type would satisfy
   this protocol if it extends all of the given bases and has the
   specified members. (TODO: Is this something we actually
-  want? It would would be a potentially powerful feature for dealing
+  want? It would be a potentially powerful feature for dealing
   with things like Pydantic models, but protocol-with-bases would be
   something of a new concept.)
 
@@ -847,7 +847,7 @@ base classes and type decorators that do ``dataclass`` like things.
 
 One snag here: it introduces type-evaluation-order dependence; if the
 ``UpdateClass`` return type for some ``__init_subclass__`` inspects
-some unrelated class's ``Members`` , and that class also has an
+some unrelated class's ``Members``, and that class also has an
 ``__init_subclass__``, then the results might depend on what order
 they are evaluated.  Ideally this kind of case would be rejected,
 which I think ought to be possible?
@@ -916,9 +916,9 @@ those cases, we add a new hook to ``typing``:
 
 
 There has been some discussion of adding a ``Format.AST`` mode for
-fetching annotations. That would combine extremely well with this
-proposal, as it would make it easy to still fetch fully unevaluated
-annotations.
+fetching annotations (see this `PEP draft <#ast_format_>`_). That
+would combine extremely well with this proposal, as it would make it
+easy to still fetch fully unevaluated annotations.
 
 Examples / Tutorial
 ===================
@@ -1213,7 +1213,45 @@ up with a new approach.
 Backwards Compatibility
 =======================
 
-[Describe potential impact and severity on pre-existing code.]
+In the most strict sense, this PEP only proposes new features, and so
+shouldn't have backward compatibility issues.
+
+More loosely speaking, though, the use of ``if`` and ``for`` in type
+annotations can cause trouble for tools that want to extract type
+annotations.
+
+Tools that want to fully evaluate the annotations will need to either
+implement an evaluator or use a library for it (the PEP authors are
+planning to produce such a library).
+
+Tools that want to extract the annotations unevaluated and process
+them in some way are possibly in more trouble. Currently, this is
+doable if ``from __future__ import annotations`` is specified, because
+the string annotation could be parsed with ``ast.parse`` and then handled
+in arbitrary ways.
+
+Absent that, as things currently stand, things get trickier, since
+there is currently no way to get useful info out of the
+``__annotate__`` functions without running the annotation, and its
+tricks for building a string do not work for loops and
+conditionals.
+
+This could be mitigated by doing one of:
+ 1. The `"Just store the
+    strings" <https://peps.python.org/pep-0649/#just-store-the-strings>`_
+    option from :pep:`649`, which would allow always extracting
+    unevaluated strings.
+ 2. Adding a ``Format.AST`` mode for
+    fetching annotations (see this `PEP draft <#ast_format_>`_)
+
+If neither of those options are taken, then tools that want to process
+unevaluated type manipulation expressions will probably need to
+reparse the source code and extract annotations from there.
+
+Note that all of these snags only come up *if* the new syntax is being
+used, so this is arguably less of a backward compatibility hazard than
+it is that supporting the new feature may be somewhat annoying for
+certain tools.
 
 
 Security Implications
@@ -1402,7 +1440,7 @@ In TypeScript, conditional types are formed like::
 
     SomeType extends OtherType ? TrueType : FalseType
 
-What's more, the right hand side of the check allows binding type
+What's more, the right-hand side of the check allows binding type
 variables based on pattern matching, using the ``infer`` keyword, like
 this example that extracts the element type of an array::
 
@@ -1515,7 +1553,7 @@ changes.)
 Another advantage is not needing any notion of a special
 ``<type-bool>`` class of types.
 
-The disadvantage is that is that the syntax seems a *lot*
+The disadvantage is that the syntax seems a *lot*
 worse. Supporting filtering while mapping would make it even more bad
 (maybe an extra argument for a filter?).
 
@@ -1544,7 +1582,7 @@ but it's still a lot of surface area, and programmers would need to
 keep in mind the boundaries of it.
 
 Additionally there would need to be a clear specification of how types
-are represented in the "mini-plugin" functions, as well defining
+are represented in the "mini-plugin" functions, as well as defining
 functions/methods for performing various manipulations. Those
 functions would have a pretty big overlap with what this PEP currently
 proposes.
@@ -1619,6 +1657,7 @@ Footnotes
 .. _#prisma-example: https://github.com/prisma/prisma-examples/tree/latest/orm/express
 .. _#qb-test: https://github.com/vercel/python-typemap/blob/main/tests/test_qblike_2.py
 .. _#starlark: https://starlark-lang.org/
+.. _#ast_format: https://imogenbits-peps.readthedocs.io/en/ast_format/pep-9999/
 
 .. [#ref-impl] https://github.com/msullivan/mypy/tree/typemap
 .. [#runtime] https://github.com/vercel/python-typemap/
