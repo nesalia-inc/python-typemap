@@ -33,13 +33,17 @@ system, some libraries come with custom mypy plugins (though then
 other typecheckers suffer). The case of dataclass-like transformations
 was considered common enough that a special-case
 ``@dataclass_transform`` decorator was added specifically to cover
-that case (:pep:`681`).
+that case (:pep:`681`). The problem with this approach is that many
+typecheckers do not (and will not) have a plugin API, so having
+consistent typechecking across IDEs, CI, and tooling is not
+achievable.
 
-We are proposing to add type manipulation facilities to the type
-system that are more capable of keeping up with dynamic Python
-code.
+Given the significant mismatch between the expressiveness of
+the Python language and its type system, we propose to bridge
+this gap by adding type manipulation facilities that
+are better able to keep up with dynamic Python code.
 
-There does seem to be demand for this. In the analysis of the
+There is demand for this. In the analysis of the
 responses to Meta's 2025 Typed Python Survey [#survey]_, the first
 entry on the list of "Most Requested Features" was:
 
@@ -50,13 +54,15 @@ entry on the list of "Most Requested Features" was:
   dictionaries/dicts (e.g., more flexible TypedDict or anonymous types).
 
 We will present a few examples of problems that could be solved with
-more powerful type manipulation.
+more powerful type manipulation, but the proposal is generic and will
+unlock many more use cases.
 
 Prisma-style ORMs
 -----------------
 
 `Prisma <#prisma_>`_, a popular ORM for TypeScript, allows writing
-queries like (adapted from `this example <#prisma-example_>`_)::
+database queries in TypeScript like
+(adapted from `this example <#prisma-example_>`_)::
 
   const user = await prisma.user.findMany({
     select: {
@@ -66,7 +72,7 @@ queries like (adapted from `this example <#prisma-example_>`_)::
     },
   });
 
-for which the inferred type will be something like::
+for which the inferred type of ``user`` will be something like::
 
     {
         email: string;
@@ -79,15 +85,16 @@ for which the inferred type will be something like::
         }[];
     }[]
 
-Here, the output type is a combination of both existing information
-about the type of ``prisma.user`` and the type of the argument to
-``findMany``. It returns an array of objects containing the properties
-of ``user`` that were requested; one of the requested elements,
-``posts``, is a "relation" referencing another model; it has *all* of
-its properties fetched but not its relations.
+Here, the output type is an intersection of the existing information
+about the type of ``prisma.user`` (a TypeScript type reflected from
+the database ``user`` table) and the type of the argument to
+the ``findMany`` method. It returns an array of objects containing
+the properties of ``user`` that were explicitly requested;
+where ``posts`` is a "relation" referencing another type.
 
-We would like to be able to do something similar in Python, perhaps
-with a schema defined like::
+We would like to be able to do something similar in Python. Suppose
+our database schema is defined in Python (or code-generated from
+the database) like::
 
     class Comment:
         id: Property[int]
@@ -112,11 +119,7 @@ with a schema defined like::
         email: Property[str]
         posts: Link[Post]
 
-(In Prisma, a code generator generates type definitions based on a
-prisma schema in its own custom format; you could imagine something
-similar here, or that the definitions were hand-written)
-
-and a call like::
+So, in Python code, a call like::
 
     db.select(
         User,
@@ -125,7 +128,7 @@ and a call like::
         posts=True,
     )
 
-which would have return type ``list[<User>]`` where::
+would have a dynamically computed return type ``list[<User>]`` where::
 
     class <User>:
         name: str
@@ -137,6 +140,8 @@ which would have return type ``list[<User>]`` where::
         title: str
         content: str
 
+Even further, an IDE could offer code completion for
+all arguments of the ``db.select()`` call, recursively.
 
 (Example code for implementing this :ref:`below <qb-impl>`.)
 
@@ -182,13 +187,14 @@ the types, using `Pydantic <#pydantic_>`_).
 Despite the multiple types and duplication here, mechanical rules
 could be written for deriving these types:
 
-* Public should include all non-"hidden" fields, and the primary key
+* The "Public" version should include all non-"hidden" fields, and the primary key
   should be made non-optional
-* Create should include all fields except the primary key
-* Update should include all fields except the primary key, but they
+* "Create" should include all fields except the primary key
+* "Update" should include all fields except the primary key, but they
   should all be made optional and given a default value
 
-With the definition of appropriate helpers, this proposal would allow writing::
+With the definition of appropriate helpers inside FastAPI framework,
+this proposal would allow its users to write::
 
     class Hero(NewSQLModel, table=True):
         id: int | None = Field(default=None, primary_key=True)
@@ -222,13 +228,12 @@ Those types, evaluated, would look something like::
         secret_name: str | None = None
 
 
+While the implementation of ``Public[]``, ``Create[]``, and ``Update[]``
+computed types is relatively complex, they perform quite mechanical
+operations and if included in the framework library they would significantly
+reduce the boilerplate the users of FastAPI have to maintain.
 
-While the implementation of ``Public``, ``Create``, and ``Update`` are
-certainly more complex than duplicating code would be, they perform
-quite mechanical operations and could be included in the framework
-library.
-
-A notable feature of this use case is that it **depends on performing
+A notable feature of this use case is that it **requires performing
 runtime evaluation of the type annotations**. FastAPI uses the
 Pydantic models to validate and convert to/from JSON for both input
 and output from endpoints.
@@ -278,8 +283,6 @@ This proposal will cover those cases.
 
 Specification of Some Prerequisites
 ===================================
-
-(Some content is still in `spec-draft.rst <spec-draft.rst>`_).
 
 We have two subproposals that are necessary to get mileage out of the
 main part of this proposal.
@@ -337,10 +340,9 @@ read-only items are invariant.)
 This is potentially moderately useful on its own but is being done to
 support processing ``**kwargs`` with type level computation.
 
----
 
-Extended Callables, take 2
---------------------------
+Extended Callables
+------------------
 
 We introduce a new extended callable proposal for expressing arbitrarily
 complex callable types. The goal here is not really to produce a new
@@ -411,9 +413,9 @@ or, using the type abbreviations we provide::
 
 (Rationale discussed :ref:`below <callable-rationale>`.)
 
-TODO: Should the extended argument list be wrapped in a
-``typing.Parameters[*Params]`` type (that will also kind of serve as a
-bound for ``ParamSpec``)?
+.. TODO: Should the extended argument list be wrapped in a
+.. ``typing.Parameters[*Params]`` type (that will also kind of serve as a
+.. bound for ``ParamSpec``)?
 
 
 Specification
@@ -427,14 +429,9 @@ forms of valid types, but much of the power comes from type level
 Grammar specification of the extensions to the type language
 ------------------------------------------------------------
 
-Note first that no changes to the **Python** grammar are being
-proposed, only to the grammar of what Python expressions are
-considered as valid types.
+No changes to the **Python** grammar are being proposed, only
+to the grammar of what Python expressions are considered as valid types.
 
-(It's also slightly imprecise to call this a grammar:
-``<bool-operator>`` refers to any of the names defined in the
-:ref:`Boolean Operators <boolean-ops>` section, which might be
-imported qualified or with some other name)
 
 ::
 
@@ -476,9 +473,14 @@ imported qualified or with some other name)
    <type-for-if> =
          if <type-bool>
 
+Where:
 
-(``<type-bool-for>`` is identical to ``<type-for>`` except that the
-result type is a ``<type-bool>`` instead of a ``<type>``.)
+* ``<bool-operator>`` refers to any of the names defined in the
+  :ref:`Boolean Operators <boolean-ops>` section, whether used directly,
+  qualified, or under another name.
+
+* ``<type-bool-for>`` is identical to ``<type-for>`` except that the
+  result type is a ``<type-bool>`` instead of a ``<type>``.
 
 There are three and a half core syntactic features introduced: type booleans,
 conditional types, unpacked comprehension types, and type member access.
@@ -496,13 +498,13 @@ Operators <boolean-ops>`, defined below, potentially combined with
 ``any``, the argument is a comprehension of type booleans, evaluated
 in the same way as the :ref:`unpacked comprehensions <unpacked>`.
 
-When evaluated, they will evaluate to ``Literal[True]`` or
-``Literal[False]``.
+When evaluated in type annotation context, they will evaluate to
+``Literal[True]`` or ``Literal[False]``.
 
-(We want to restrict what operators may be used in a conditional
+We restrict what operators may be used in a conditional
 so that at runtime, we can have those operators produce "type" values
 with appropriate behavior, without needing to change the behavior of
-existing ``Literal[False]`` values and the like.)
+existing ``Literal[False]`` values and the like.
 
 
 Conditional types
@@ -578,14 +580,12 @@ Basic operators
 
   Negative indexes work in the usual way.
 
-  N.B: Runtime evaluation will only be able to support proper classes
+  Note that runtime evaluation will only be able to support proper classes
   as ``Base``, *not* protocols. So, for example, ``GetArg[Ty,
-  Iterable, 0]`` to get the type of something iterable will need to
-  fail in a runtime evaluator. We should be able to allow it
-  statically though.
+  Iterable, 0]`` to get the type of something iterable will
+  fail in the runtime evaluator.
 
-  Special forms unfortunately
-  require some special handling: the arguments list of a ``Callable``
+  Special forms require special handling: the arguments list of a ``Callable``
   will be packed in a tuple, and a ``...`` will become
   ``SpecialFormEllipsis``.
 
@@ -681,11 +681,11 @@ Object creation
   something of a new concept.)
 
 * ``NewTypedDict[*Ps: Member]`` - Creates a new ``TypedDict`` with
-  items specified by the ``Member`` arguments. TODO: Do we want a way
-  to specify ``extra_items``?
+  items specified by the ``Member`` arguments.
 
-
-N.B: Currently we aren't proposing any way to create nominal classes
+  .. TODO: Do we want a way to specify ``extra_items``?
+  
+Note that we are not currently proposing any way to create *nominal* classes
 or any way to make new *generic* types.
 
 
@@ -696,7 +696,7 @@ InitField
 
 We want to be able to support transforming types based on
 dataclasses/attrs/pydantic style field descriptors.  In order to do
-that, we need to be able to consume things like calls to ``Field``.
+that, we need to be able to consume operations like calls to ``Field``.
 
 Our strategy for this is to introduce a new type
 ``InitField[KwargDict]`` that collects arguments defined by a
@@ -728,14 +728,14 @@ that would be made available as the ``Init`` field of the ``Member``.
 Annotated
 '''''''''
 
-TODO: This could maybe be dropped if it doesn't seem implementable?
+.. TODO: This could maybe be dropped if it doesn't seem implementable?
 
 Libraries like FastAPI use annotations heavily, and we would like to
 be able to use annotations to drive type-level computation decision
 making.
 
-We understand that this may be controversial, as currently ``Annotated``
-may be fully ignored by typecheckers. The operations proposed are:
+Note that currently ``Annotated`` may be fully ignored by typecheckers.
+The operations proposed are:
 
 * ``GetAnnotations[T]`` - Fetch the annotations of a potentially
   Annotated type, as Literals. Examples::
@@ -762,8 +762,7 @@ Callable format discussed above.
 The names, type, and qualifiers share associated type names with
 ``Member`` (``.name``, ``.type``, and ``.quals``).
 
-TODO: Should we make ``.init`` be literal types of default parameter
-values too?
+.. TODO: Should we make ``.init`` be literal types of default parameter values too?
 
 .. _generic-callable:
 
@@ -776,16 +775,13 @@ Generic Callable
   variables in ``Vs`` via the bound variables in ``<vs>``.
 
 For now, we restrict the use of ``GenericCallable`` to
-the type argument of ``Member`` (that is, to disallow its use for
+the type argument of ``Member``, to disallow its use for
 locals, parameter types, return types, nested inside other types,
-etc).
+etc.  Rationale discussed :ref:`below <generic-callable-rationale>`.
 
-(This is a little unsatisfying. Rationale discussed :ref:`below
-<generic-callable-rationale>`.)
-
-TODO: Decide if we have any mechanisms to inspect/destruct
-``GenericCallable``. Maybe can fetch the variable information and
-maybe can apply it to concrete types?
+.. TODO: Decide if we have any mechanisms to inspect/destruct
+.. ``GenericCallable``. Maybe can fetch the variable information and
+.. maybe can apply it to concrete types?
 
 Overloaded function types
 '''''''''''''''''''''''''
@@ -797,8 +793,8 @@ String manipulation
 '''''''''''''''''''
 
 String manipulation operations for string ``Literal`` types.
-We can put more in, but this is what typescript has.
-``Slice`` and ``Concat`` are a poor man's literal template.
+
+``Slice`` and ``Concat`` allow for basic literal template-like manipulation.
 We can actually implement the case functions in terms of them and a
 bunch of conditionals, but shouldn't (especially if we want it to work
 for all unicode!).
@@ -1151,9 +1147,9 @@ I am proposing a fully new extended callable syntax because:
  2. They use parentheses and not brackets, which really goes against
     the philosophy here.
  3. We can make an API that more nicely matches what we are going to
-    do for inspecting members (We could introduce extended callables that
+    do for inspecting members (we could introduce extended callables that
     closely mimic the ``mypy_extensions`` version though, if something new
-    is a non starter)
+    is a non-starter)
 
 TODO: Currently I made the qualifiers be short strings, for code brevity
 when using them, but an alternate approach would be to mirror
@@ -1600,10 +1596,10 @@ situation at lower cost.
 Make the type-level operations more "strictly-typed"
 ----------------------------------------------------
 
-This proposal is less "strictly-typed" than typescript
+This proposal is less "strictly-typed" than TypeScript
 (strictly-kinded, maybe?).
 
-Typescript has better typechecking at the alias definition site:
+TypeScript has better typechecking at the alias definition site:
 For ``P[K]``, ``K`` needs to have ``keyof P``...
 
 We could do potentially better but it would require more machinery.
