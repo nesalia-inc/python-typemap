@@ -13,6 +13,16 @@ class Array[DType, *Shape]:
     ) -> Array[DType, *Broadcast[tuple[*Shape], tuple[*Shape2]]]:
         raise BaseException
 
+"""
+
+``MergeOne`` is the core of the broadcasting operation. If the two types
+are equivalent, we take the first, and if either of the types is
+``Literal[1]`` then we take the other.
+
+On a mismatch, we use the ``RaiseError`` operator to produce an error
+message identifying the two types.
+"""
+
 
 type MergeOne[T, S] = (
     T
@@ -28,6 +38,12 @@ type Last[T] = typing.GetArg[T, tuple, Literal[-1]]
 # Matching on Never here is intentional; it prevents infinite
 # recursions when T is not a tuple.
 type Empty[T] = typing.IsAssignable[typing.Length[T], Literal[0]]
+
+"""
+
+Broadcast recursively walks down the input tuples applying ``MergeOne``
+until one of them is empty.
+"""
 
 type Broadcast[T, S] = (
     S

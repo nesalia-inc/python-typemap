@@ -1073,7 +1073,107 @@ dataclasses-style method generation
         *[x for x in typing.Iter[typing.Members[T]]],
     ]
 
-XXX: Update this test to have UpdateClass
+
+NumPy-style broadcasting
+------------------------
+
+One of the motivations for the introduction of ``TypeVarTuple`` in
+:pep:`646` is to represent the shapes of multi-dimensional
+arrays, such as::
+
+  x: Array[float, L[480], L[640]] = Array()
+
+The example in that PEP shows how ``TypeVarTuple`` can be used to
+make sure that both sides of an arithmetic operation have matching
+shapes. Most multi-dimensional array libraries, however, also support
+broadcasting [#broadcasting]_, which allows the mixing of differently
+shaped data.  With this PEP, we can define a ``Broadcast[A, B]`` type
+alias, and then use it as a return type::
+
+    class Array[DType, *Shape]:
+        def __add__[*Shape2](
+            self,
+            other: Array[DType, *Shape2]
+        ) -> Array[DType, *Broadcast[tuple[*Shape], tuple[*Shape2]]]:
+            raise BaseException
+
+(The somewhat clunky syntax of wrapping the ``TypeVarTuple`` in
+another ``tuple`` is because typecheckers currently disallow having
+two ``TypeVarTuple`` arguments. A possible improvement would be to
+allow writing the bare (non-starred or ``Unpack``-ed) variable name to
+mean its interpretation as a tuple.)
+
+We can then do::
+
+    a1: Array[float, L[4], L[1]]
+    a2: Array[float, L[3]]
+    a1 + a2  # Array[builtins.float, Literal[4], Literal[3]]
+
+    b1: Array[float, int, int]
+    b2: Array[float, int]
+    b1 + b2  # Array[builtins.float, int, int]
+
+    err1: Array[float, L[4], L[2]]
+    err2: Array[float, L[3]]
+    # err1 + err2  # E: Broadcast mismatch: Literal[2], Literal[3]
+
+
+Note that this is meant to be an example of the expressiveness of type
+manipulation, and not any kind of final proposal about the typing of
+tensor types.
+
+.. _numpy-impl:
+
+Implementation
+''''''''''''''
+
+::
+
+    class Array[DType, *Shape]:
+        def __add__[*Shape2](
+            self, other: Array[DType, *Shape2]
+        ) -> Array[DType, *Broadcast[tuple[*Shape], tuple[*Shape2]]]:
+            raise BaseException
+
+``MergeOne`` is the core of the broadcasting operation. If the two types
+are equivalent, we take the first, and if either of the types is
+``Literal[1]`` then we take the other.
+
+On a mismatch, we use the ``RaiseError`` operator to produce an error
+message identifying the two types.
+
+::
+
+    type MergeOne[T, S] = (
+        T
+        if typing.IsEquivalent[T, S] or typing.IsEquivalent[S, Literal[1]]
+        else S
+        if typing.IsEquivalent[T, Literal[1]]
+        else typing.RaiseError[Literal["Broadcast mismatch"], T, S]
+    )
+
+    type DropLast[T] = typing.Slice[T, Literal[0], Literal[-1]]
+    type Last[T] = typing.GetArg[T, tuple, Literal[-1]]
+
+    # Matching on Never here is intentional; it prevents infinite
+    # recursions when T is not a tuple.
+    type Empty[T] = typing.IsAssignable[typing.Length[T], Literal[0]]
+
+Broadcast recursively walks down the input tuples applying ``MergeOne``
+until one of them is empty.
+
+::
+
+    type Broadcast[T, S] = (
+        S
+        if typing.Bool[Empty[T]]
+        else T
+        if typing.Bool[Empty[S]]
+        else tuple[
+            *Broadcast[DropLast[T], DropLast[S]],
+            MergeOne[Last[T], Last[S]],
+        ]
+    )
 
 
 Rationale
@@ -1229,8 +1329,8 @@ also where this PEP draft currently lives.
 
 There is an in-progress proof-of-concept implementation in mypy [#ref-impl]_.
 
-It can type check the ORM and FastAPI-style model derivation
-examples.
+It can type check the ORM, FastAPI-style model derivation, and
+NumPy-style broadcasting examples.
 
 It is missing support for callables, ``UpdateClass``, annotation
 processing, and various smaller things.
@@ -1676,6 +1776,7 @@ Footnotes
 .. _#starlark: https://starlark-lang.org/
 .. _#ast_format: https://imogenbits-peps.readthedocs.io/en/ast_format/pep-9999/
 
+.. [#broadcasting] http://docs.scipy.org/doc/numpy/user/basics.broadcasting.html
 .. [#ref-impl] https://github.com/msullivan/mypy/tree/typemap
 .. [#runtime] https://github.com/vercel/python-typemap/
 .. [#survey] https://engineering.fb.com/2025/12/22/developer-tools/python-typing-survey-2025-code-quality-flexibility-typing-adoption/
