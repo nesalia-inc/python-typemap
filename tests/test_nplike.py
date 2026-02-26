@@ -13,6 +13,7 @@ class Array[DType, *Shape]:
     ) -> Array[DType, *Broadcast[tuple[*Shape], tuple[*Shape2]]]:
         raise BaseException
 
+
 """
 
 ``MergeOne`` is the core of the broadcasting operation. If the two types
