@@ -1,4 +1,4 @@
-PEP: 9999
+PEP: 827
 Title: Type Manipulation
 Author: Michael J. Sullivan <sully@vercel.com>, Daniel W. Park <daniel.park@vercel.com>, Yury Selivanov <yury@vercel.com>
 Discussions-To: Pending
