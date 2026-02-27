@@ -292,6 +292,8 @@ We have two subproposals that are necessary to get mileage out of the
 main part of this proposal.
 
 
+.. _unpack-kwargs:
+
 Unpack of typevars for ``**kwargs``
 -----------------------------------
 
@@ -328,11 +330,7 @@ from "PEP 646 – Variadic Generics".
 When inferring types here, the type checker should **infer literal
 types when possible**.  This means inferring literal types for
 arguments that **do not** appear in the bound, as well as
-for arguments that **do** appear in the bound as read-only (QUESTION: Or
-maybe we should make whether to do it for extra arguments
-configurable in the ``TypedDict`` serving as the bound somehow? If
-``readonly`` had been added as a parameter to ``TypedDict`` we would
-use that.)
+for arguments that **do** appear in the bound as read-only.
 
 For each non-required item in the bound that does **not** have a
 matching argument provided, then if the item is read-only, it will
@@ -344,6 +342,8 @@ read-only items are invariant.)
 This is potentially moderately useful on its own but is being done to
 support processing ``**kwargs`` with type level computation.
 
+
+.. _extended-callables-prereq:
 
 Extended Callables
 ------------------
@@ -415,11 +415,6 @@ or, using the type abbreviations we provide::
     ]
 
 (Rationale discussed :ref:`below <callable-rationale>`.)
-
-QUESTION: Should the extended argument list be wrapped in a
-``typing.Parameters[*Params]`` type (that will also kind of serve as a
-bound for ``ParamSpec``)?
-
 
 Specification
 =============
@@ -744,10 +739,6 @@ the type argument of ``Member``, to disallow its use for
 locals, parameter types, return types, nested inside other types,
 etc.  Rationale discussed :ref:`below <generic-callable-rationale>`.
 
-QUESTION: Should we have any mechanisms to inspect/destruct
-``GenericCallable``. Maybe can fetch the variable information and
-maybe can apply it to concrete types?
-
 Overloaded function types
 '''''''''''''''''''''''''
 
@@ -764,6 +755,8 @@ Raise error
 
   Any additional type arguments should be included in the message.
 
+.. _update-class:
+
 Update class
 ''''''''''''
 
@@ -779,16 +772,6 @@ Update class
   applied in reverse MRO order. N.B: If the ``cls`` param is
   parameterized by ``type[T]``, then the class type should be
   substituted in for ``T``.
-
-One snag here: it introduces type-evaluation-order dependence; if the
-``UpdateClass`` return type for some ``__init_subclass__`` inspects
-some unrelated class's ``Members``, and that class also has an
-``__init_subclass__``, then the results might depend on what order
-they are evaluated.  Ideally this kind of case would be rejected,
-which I think ought to be possible?
-
-This does actually exactly mirror a potential **runtime**
-evaluation-order dependence, though.
 
 .. _lifting:
 
@@ -1223,15 +1206,6 @@ I am proposing a fully new extended callable syntax because:
     do for inspecting members (we could introduce extended callables that
     closely mimic the ``mypy_extensions`` version though, if something new
     is a non-starter)
-
-QUESTION: Currently I made the qualifiers be short strings, for code brevity
-when using them, but an alternate approach would be to mirror
-``inspect.Signature`` more directly, and have an enum with names like
-``ParamKind.POSITIONAL_OR_KEYWORD``. Would that be better?
-
-A related potential change would be to fully separate the kind from whether
-there is a default, and have whether there is a default represented in
-an ``init`` field, like we do for ``Member``.
 
 .. _generic-callable-rationale:
 
@@ -1782,6 +1756,37 @@ Open Issues
 ===========
 
 * What invalid operations should be errors and what should return ``Never``?
+
+* :ref:`Unpack of typevars for **kwargs <unpack-kwargs>`: Should
+  whether we try to infer literal types for extra arguments be
+  configurable in the ``TypedDict`` serving as the bound somehow? If
+  ``readonly`` had been added as a parameter to ``TypedDict`` we would
+  use that, but it wasn't.
+
+* :ref:`Extended Callables <extended-callables-prereq>`: Should the extended
+  argument list be wrapped in a ``typing.Parameters[*Params]`` type (that
+  will also kind of serve as a bound for ``ParamSpec``)?
+
+* :ref:`Extended Callables <extended-callables-prereq>`: Currently the
+  qualifiers are short strings for code brevity, but an alternate approach
+  would be to mirror ``inspect.Signature`` more directly, and have an enum
+  with names like ``ParamKind.POSITIONAL_OR_KEYWORD``. Would that be better?
+
+  A related potential change would be to fully separate the kind from whether
+  there is a default, and have whether there is a default represented in
+  an ``init`` field, like we do for class member initializers with ``Member``.
+
+* :ref:`Generic Callable <generic-callable>`: Should we have any mechanisms
+  to inspect/destruct ``GenericCallable``? Maybe can fetch the variable
+  information and maybe can apply it to concrete types?
+
+* :ref:`Update class <update-class>`: ``UpdateClass`` introduces
+  type-evaluation-order dependence; if the ``UpdateClass`` return type for
+  some ``__init_subclass__`` inspects some unrelated class's ``Members``,
+  and that class also has an ``__init_subclass__``, then the results might
+  depend on what order they are evaluated. Ideally this kind of case would be
+  rejected. This does actually exactly mirror a potential **runtime**
+  evaluation-order dependence, though.
 
 What exactly are the subtyping (etc) rules for unevaluated types
 ----------------------------------------------------------------
