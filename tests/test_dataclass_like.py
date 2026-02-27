@@ -88,6 +88,8 @@ class decorator (a-la `@dataclass`) adds a new `__init__`` method to a
 class.
 
 """
+
+
 def dataclass_ish[T](
     cls: type[T],
 ) -> typing.UpdateClass[
@@ -102,6 +104,8 @@ def dataclass_ish[T](
 Or to create a base class (a-la Pydantic) that does.
 
 """
+
+
 class Model:
     def __init_subclass__[T](
         cls: type[T],
@@ -110,8 +114,6 @@ class Model:
         InitFnType[T],
     ]:
         super().__init_subclass__()
-
-
 
 
 # End PEP section
