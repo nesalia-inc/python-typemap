@@ -1817,6 +1817,9 @@ Acknowledgements
 
 We'd like to thank Jukka Lehtosalo, for many discussions about the design.
 
+We'd also like to thank the TypeScript team for their language's
+substantial influence on this proposal!
+
 Footnotes
 =========
 
