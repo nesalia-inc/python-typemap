@@ -324,7 +324,7 @@ from "PEP 646 – Variadic Generics".
 When inferring types here, the type checker should **infer literal
 types when possible**.  This means inferring literal types for
 arguments that **do not** appear in the bound, as well as
-for arguments that **do** appear in the bound as read-only (TODO: Or
+for arguments that **do** appear in the bound as read-only (QUESTION: Or
 maybe we should make whether to do it for extra arguments
 configurable in the ``TypedDict`` serving as the bound somehow? If
 ``readonly`` had been added as a parameter to ``TypedDict`` we would
@@ -413,9 +413,9 @@ or, using the type abbreviations we provide::
 
 (Rationale discussed :ref:`below <callable-rationale>`.)
 
-.. TODO: Should the extended argument list be wrapped in a
-.. ``typing.Parameters[*Params]`` type (that will also kind of serve as a
-.. bound for ``ParamSpec``)?
+QUESTION: Should the extended argument list be wrapped in a
+``typing.Parameters[*Params]`` type (that will also kind of serve as a
+bound for ``ParamSpec``)?
 
 
 Specification
@@ -729,26 +729,24 @@ Callable format discussed above.
 The names, type, and qualifiers share associated type names with
 ``Member`` (``.name``, ``.type``, and ``.quals``).
 
-.. TODO: Should we make ``.init`` be literal types of default parameter values too?
-
 .. _generic-callable:
 
 Generic Callable
 ''''''''''''''''
 
-* ``GenericCallable[Vs, lambda <vs>: Ty]``: A generic callable. ``Vs`` are a tuple
-  type of unbound type variables and ``Ty`` should be a ``Callable``,
-  ``staticmethod``, or ``classmethod`` that has access to the
-  variables in ``Vs`` via the bound variables in ``<vs>``.
+* ``GenericCallable[Vs, lambda <vs>: Ty]``: A generic callable. ``Vs``
+  are a tuple type of unbound type variables and ``Ty`` should be a
+  ``Callable``, ``staticmethod``, or ``classmethod`` that has access
+  to the variables in ``Vs`` via the bound variables in ``<vs>``.
 
 For now, we restrict the use of ``GenericCallable`` to
 the type argument of ``Member``, to disallow its use for
 locals, parameter types, return types, nested inside other types,
 etc.  Rationale discussed :ref:`below <generic-callable-rationale>`.
 
-.. TODO: Decide if we have any mechanisms to inspect/destruct
-.. ``GenericCallable``. Maybe can fetch the variable information and
-.. maybe can apply it to concrete types?
+QUESTION: Should we have any mechanisms to inspect/destruct
+``GenericCallable``. Maybe can fetch the variable information and
+maybe can apply it to concrete types?
 
 Overloaded function types
 '''''''''''''''''''''''''
@@ -1229,10 +1227,14 @@ I am proposing a fully new extended callable syntax because:
     closely mimic the ``mypy_extensions`` version though, if something new
     is a non-starter)
 
-TODO: Currently I made the qualifiers be short strings, for code brevity
+QUESTION: Currently I made the qualifiers be short strings, for code brevity
 when using them, but an alternate approach would be to mirror
 ``inspect.Signature`` more directly, and have an enum with names like
-``ParamKind.POSITIONAL_OR_KEYWORD``.
+``ParamKind.POSITIONAL_OR_KEYWORD``. Would that be better?
+
+A related potential change would be to fully separate the kind from whether
+there is a default, and have whether there is a default represented in
+an ``init`` field, like we do for ``Member``.
 
 .. _generic-callable-rationale:
 
