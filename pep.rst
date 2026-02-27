@@ -5,7 +5,7 @@ Discussions-To: Pending
 Status: Draft
 Type: Standards Track
 Topic: Typing
-Created: <date created on, in dd-mmm-yyyy format>
+Created: 27-Feb-2026
 Python-Version: 3.15
 Post-History: Pending
 
