@@ -83,9 +83,8 @@ type AddInit[T] = typing.NewProtocol[
 
 """
 
-``UpdateClass`` can then be used to create a
-class decorator (a-la `@dataclass`) adds a new `__init__`` method to a
-class.
+``UpdateClass`` can then be used to create a class decorator (ala
+`@dataclass`) adds a new `__init__`` method to a class.
 
 """
 
@@ -101,7 +100,7 @@ def dataclass_ish[T](
 
 """
 
-Or to create a base class (a-la Pydantic) that does.
+Or to create a base class (a la Pydantic) that does.
 
 """
 

@@ -551,7 +551,7 @@ discussion of potential alternatives :ref:`below <strict-kinds>`.)
 
 Note that in some of these bounds below we write things like
 ``Literal[int]`` to mean "a literal that is of type ``int``".
-We don't propose to add that as actula syntax yet.
+We don't propose to add that as actual syntax yet.
 
 .. _boolean-ops:
 
@@ -660,8 +660,8 @@ Object inspection
 
 * ``MemberQuals = Literal['ClassVar', 'Final', 'NotRequired', 'ReadOnly']`` -
   ``MemberQuals`` is the type of "qualifiers" that can apply to a
-  member; currently ``ClassVar`` and ``Final`` apply to classes and
-  ``NotRequired``, and ``ReadOnly`` to typed dicts
+  member; currently ``ClassVar`` and ``Final`` apply to classes, and
+  ``NotRequired`` and ``ReadOnly`` apply to typed dicts.
 
 
 Methods are returned as callables using the new ``Param`` based
@@ -1055,9 +1055,8 @@ based on iterating over all attributes.
         *[x for x in typing.Iter[typing.Members[T]]],
     ]
 
-``UpdateClass`` can then be used to create a
-class decorator (a-la `@dataclass`) adds a new `__init__`` method to a
-class.
+``UpdateClass`` can then be used to create a class decorator (ala
+`@dataclass`) adds a new `__init__`` method to a class.
 
 ::
 
@@ -1069,7 +1068,7 @@ class.
     ]:
         pass
 
-Or to create a base class (a-la Pydantic) that does.
+Or to create a base class (a la Pydantic) that does.
 
 ::
 
@@ -1279,9 +1278,9 @@ implement an evaluator or use a library for it (the PEP authors are
 planning to produce such a library).
 
 Tools that specifically rely on introspecting annotations at runtime
-(tools tha parse Python files are obviously unaffected) that want
-to extract the annotations unevaluated and process
-them in some way are possibly in more trouble. Currently, this is
+(tools that parse Python files are obviously unaffected) that want
+to extract the annotations unevaluated and process them in some way are
+possibly in more trouble. Currently, this is
 doable if ``from __future__ import annotations`` is specified, because
 the string annotation could be parsed with ``ast.parse`` and then handled
 in arbitrary ways.
@@ -1379,7 +1378,7 @@ annotation expression in an arm of a conditional type?
 The main downside of this proposal is just complexity: it requires
 introducing another kind of weird type form.
 
-We'd also need to figure out the exact interaction between typeddicts
+We'd also need to figure out the exact interaction between TypedDicts
 and new protocols. Would the dictionary syntax always produce a typed
 dict, and then ``NewProtocol`` converts it to a protocol, or would
 ``NewProtocol[<dict type expr>]`` be a special form? Would we try to
@@ -1489,8 +1488,8 @@ limited set of ``<type-bool>`` expressions that can appear in
 conditional types.
 
 For better or worse, though, runtime use of type annotations is
-widespread, e.g. ``pydantic`` depends on it, and one of our motivating 
-examples (automatically derivin FastAPI CRUD models) depends on it too.
+widespread, e.g. ``pydantic`` depends on it, and one of our motivating
+examples (automatically deriving FastAPI CRUD models) depends on it too.
 
 Support TypeScript style pattern matching in subtype checking
 -------------------------------------------------------------
