@@ -1,6 +1,8 @@
 PEP: 827
 Title: Type Manipulation
-Author: Michael J. Sullivan <sully@vercel.com>, Daniel W. Park <daniel.park@vercel.com>, Yury Selivanov <yury@vercel.com>
+Author: Michael J. Sullivan <sully@vercel.com>,
+        Daniel W. Park <daniel.park@vercel.com>,
+        Yury Selivanov <yury@vercel.com>
 Discussions-To: Pending
 Status: Draft
 Type: Standards Track
@@ -1017,7 +1019,7 @@ initializer).
 dataclasses-style method generation
 -----------------------------------
 
-``InitFnType`` generates a ``Member`` for a new `__init__` function
+``InitFnType`` generates a ``Member`` for a new ``__init__`` function
 based on iterating over all attributes.
 
 ``GetDefault`` here is borrowed from our FastAPI-like example above.
@@ -1055,8 +1057,8 @@ based on iterating over all attributes.
         *[x for x in typing.Iter[typing.Members[T]]],
     ]
 
-``UpdateClass`` can then be used to create a class decorator (ala
-`@dataclass`) adds a new `__init__`` method to a class.
+``UpdateClass`` can then be used to create a class decorator (a la
+``@dataclass``) adds a new ``__init__`` method to a class.
 
 ::
 
@@ -1292,8 +1294,7 @@ tricks for building a string do not work for loops and
 conditionals.
 
 This could be mitigated by doing one of:
- 1. The `"Just store the
-    strings" <https://peps.python.org/pep-0649/#just-store-the-strings>`_
+ 1. The :pep:`"Just store the strings" <649#just-store-the-strings>`_
     option from :pep:`649`, which would allow always extracting
     unevaluated strings.
  2. Adding a ``Format.AST`` mode for

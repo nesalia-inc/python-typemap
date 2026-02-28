@@ -42,7 +42,7 @@ type GetDefault[Init] = (
 
 """
 
-``InitFnType`` generates a ``Member`` for a new `__init__` function
+``InitFnType`` generates a ``Member`` for a new ``__init__`` function
 based on iterating over all attributes.
 
 ``GetDefault`` here is borrowed from our FastAPI-like example above.
@@ -83,8 +83,8 @@ type AddInit[T] = typing.NewProtocol[
 
 """
 
-``UpdateClass`` can then be used to create a class decorator (ala
-`@dataclass`) adds a new `__init__`` method to a class.
+``UpdateClass`` can then be used to create a class decorator (a la
+``@dataclass``) adds a new ``__init__`` method to a class.
 
 """
 
