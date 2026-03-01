@@ -585,7 +585,7 @@ Basic operators
   number ``Idx`` to ``T`` when interpreted as ``Base``, or ``Never``
   if it cannot be. (That is, if we have ``class A(B[C]): ...``, then
   ``GetArg[A, B, Literal[0]] == C``
-   while ``GetArg[A, A, Literal[0]] == Never``).
+  while ``GetArg[A, A, Literal[0]] == Never``).
 
   Negative indexes work in the usual way.
 
