@@ -84,7 +84,7 @@ sendEmail(password, 'Hi'); // Error! Password is not Email
 
 ## Type Widening
 
-TypeScript widens les types literal vers leur type de base :
+TypeScript widens literal types to their base type:
 
 ```typescript
 // TypeScript automatically widens
