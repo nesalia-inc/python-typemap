@@ -254,19 +254,127 @@ type UserMethods = MethodNames[User]
 
 ```python
 # Snake/Camel case converters
-type SnakeToCamel[S] = ...  # Convert snake_case to camelCase
-type CamelToSnake[S] = ...  # Convert camelCase to snake_case
+# Note: These require explicit mapping - no dynamic character transformation in PEP 827
 
-# Pluralizer
-type Pluralize[S] = ...  # 'user' → 'users'
+# Snake to Camel - need explicit mapping for each field
+type SnakeToCamelMapping = {
+    'user_name': 'userName',
+    'email_address': 'emailAddress',
+    'created_at': 'createdAt',
+}
 
-# URL builders
+# For use with iteration, need explicit mapping:
+type CamelFromSnake[S] = (
+    'userName' if S == 'user_name'
+    else 'emailAddress' if S == 'email_address'
+    else 'createdAt' if S == 'created_at'
+    else S  # Fallback - no automatic conversion
+)
+
+# Camel to Snake - same limitation
+type CamelToSnake[S] = (
+    'user_name' if S == 'userName'
+    else 'email_address' if S == 'emailAddress'
+    else 'created_at' if S == 'createdAt'
+    else S
+)
+
+# Pluralizer - simple rules (can't handle irregulars)
+type Pluralize[S] = (
+    StrConcat[S, 's']  # Simple: just add 's'
+)
+
+# URL builders - these WORK with current operators!
 type RouteBuilder[Resource] = StrConcat['/', Resource]
 type RouteList[Resource] = StrConcat[Resource, 's']
 
 # Usage
 type UsersRoute = RouteBuilder['users']  # → '/users'
 type UserRoutes = RouteList['user']  # → 'users'
+```
+
+### Practical Implementation
+
+Since we can't do dynamic character transformation, here's how to build these practically:
+
+```python
+# 1. URL builders - WORKS perfectly
+type APIv1 = StrConcat['/api/v1/', 'users']  # → '/api/v1/users'
+type APIEndpoint = StrConcat['/', StrConcat[Resource, 's']]
+
+# 2. For case conversion - use explicit mapping
+# Create a mapping type for your specific fields
+type FieldNameMapping = {
+    'user_name': 'userName',
+    'first_name': 'firstName',
+    'last_name': 'lastName',
+    'email_address': 'emailAddress',
+    'created_at': 'createdAt',
+    'updated_at': 'updatedAt',
+}
+
+# Then use in iteration:
+type ToCamelCase[T] = NewProtocol[
+    *[
+        Member[
+            FieldNameMapping.get(p.name, p.name),  # Use mapping or keep original
+            p.type,
+        ]
+        for p in Iter[Attrs[T]]
+    ]
+]
+
+# 3. Pluralizer - simple version
+type Plural[S] = StrConcat[S, 's']
+
+# Usage
+type Users = Plural['user']  # → 'users'
+type Categories = Plural['category']  # → 'categories'
+
+# 4. API routes - build from resource
+type ResourceRoute[Resource] = StrConcat['/', Plural[Resource]]
+
+type UserRoute = ResourceRoute['user']      # → '/users'
+type AccountRoute = ResourceRoute['account']  # → '/accounts'
+```
+
+### Complete Example
+
+```python
+# Define your model
+class User:
+    user_name: str
+    email_address: str
+    created_at: datetime
+
+# Case conversion mapping
+type FieldToCamel = {
+    'user_name': 'userName',
+    'email_address': 'emailAddress',
+    'created_at': 'createdAt',
+}
+
+# Convert field names to camelCase
+type CamelUser = NewProtocol[
+    *[
+        Member[
+            FieldToCamel.get(p.name, p.name),
+            p.type,
+        ]
+        for p in Iter[Attrs[User]]
+    ]
+]
+
+# Result:
+# {
+#     userName: str,
+#     emailAddress: str,
+#     createdAt: datetime
+# }
+
+# API route
+type UserRoute = StrConcat['/api/v1/', StrConcat[Plural['user'], '/', 'id']]
+# → '/api/v1/users/{id}'
 ```
 
 ### Key Insight
