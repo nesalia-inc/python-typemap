@@ -33,6 +33,7 @@ type InitFnType[T] = typing.Member[
 
 class Model:
     """Base class that adds __init__ to subclasses via UpdateClass"""
+
     def __init_subclass__[T](cls: type[T]) -> typing.UpdateClass[InitFnType[T]]:
         super().__init_subclass__()
 

@@ -120,7 +120,7 @@ class EvalContext:
 
 # `eval_types()` calls can be nested, context must be preserved
 _current_context: contextvars.ContextVar[EvalContext | None] = (
-    contextvars.ContextVar('_current_context', default=None)
+    contextvars.ContextVar("_current_context", default=None)
 )
 
 
@@ -328,7 +328,7 @@ def _eval_annotated(obj: typing_AnnotatedAlias, ctx: EvalContext):
 @_eval_types_impl.register
 def _eval_type_alias(obj: typing.TypeAliasType, ctx: EvalContext):
     unpacked = _apply_generic.get_annotations(
-        obj, args={}, key='evaluate_value'
+        obj, args={}, key="evaluate_value"
     )
     return _eval_types(unpacked, ctx)
 
@@ -387,7 +387,7 @@ def _eval_applied_type_alias(obj: types.GenericAlias, ctx: EvalContext):
             child_ctx.alias_stack.add(new_obj)
 
         unpacked = _apply_generic.get_annotations(
-            obj, named_args, key='evaluate_value'
+            obj, named_args, key="evaluate_value"
         )
 
         child_ctx.seen[obj] = unpacked
@@ -416,7 +416,7 @@ def _eval_nested_generic_alias(
     )
 
     unpacked = _apply_generic.get_annotations(
-        alias, named_args, key='evaluate_value'
+        alias, named_args, key="evaluate_value"
     )
 
     return _eval_types(unpacked, ctx)

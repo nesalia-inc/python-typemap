@@ -28,8 +28,8 @@ class BaseModel:
             # like handle containers, etc!
             if not isinstance(v, annos[k]):
                 raise TypeError(
-                    f'Invalid type for {k} - '
-                    f'got {type(v)} but needed {annos[k]}'
+                    f"Invalid type for {k} - "
+                    f"got {type(v)} but needed {annos[k]}"
                 )
             setattr(self, k, v)
 
@@ -41,7 +41,7 @@ class BaseModel:
 
     def __repr__(self):
         # Just debugging output
-        return f'{type(self).__name__}(**{self.__dict__})'
+        return f"{type(self).__name__}(**{self.__dict__})"
 
 
 class _BaseModelAlias(_GenericAlias, _root=True):
@@ -58,7 +58,7 @@ class Foo[T](BaseModel):
 
 
 def test_model_like_1():
-    Foo[str](x=0, y='yes')  # OK
+    Foo[str](x=0, y="yes")  # OK
     with pytest.raises(TypeError):
         Foo[str](x=0, y=False)  # error
 

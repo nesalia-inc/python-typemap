@@ -62,7 +62,7 @@ def _from_literal(val):
         return val.__args__[0]
     elif val is type(None):
         return None
-    raise AssertionError(f'expected a literal type, got {val!r}')
+    raise AssertionError(f"expected a literal type, got {val!r}")
 
 
 def _eval_literal(val, ctx):
@@ -85,7 +85,7 @@ def _make_init_type(v):
 
 
 def cached_box(cls, *, ctx: EvalContext):
-    if str(cls).startswith('typemap.typing'):
+    if str(cls).startswith("typemap.typing"):
         return _apply_generic.box(cls)
     if cls in ctx.box_cache:
         return ctx.box_cache[cls]
@@ -223,14 +223,14 @@ def _get_update_class_members(
     args = {}
     # Get any type params from the base class if it is generic
     if (base_args := boxed_base.args.values()) and (
-        origin_params := getattr(base_origin, '__type_params__', None)
+        origin_params := getattr(base_origin, "__type_params__", None)
     ):
         args = dict(
             zip((p.__name__ for p in origin_params), base_args, strict=True)
         )
 
     # Get type params from function
-    if type_params := getattr(init_subclass, '__type_params__', None):
+    if type_params := getattr(init_subclass, "__type_params__", None):
         args[type_params[0].__name__] = box.alias_type()
 
     init_subclass_annos = _apply_generic.get_annotations(init_subclass, args)
@@ -1278,7 +1278,7 @@ def _eval_NewProtocol(*etyps: Member, ctx):
     mcls: type = type(typing.cast(type, typing.Protocol))
     cls = mcls(name, (typing.Protocol,), dct)
     # Stick __init__ back in, since Protocol messes with it
-    if '__init__' in dct:
-        cls.__init__ = dct['__init__']
+    if "__init__" in dct:
+        cls.__init__ = dct["__init__"]
 
     return cls

@@ -36,7 +36,7 @@ class Boxed:
             {
                 # Use __name__ when available instead of str()
                 # str(TypeVar('A')) returns '~A'
-                (k.__name__ if hasattr(k, '__name__') else str(k)): v
+                (k.__name__ if hasattr(k, "__name__") else str(k)): v
                 for k, v in self.args.items()
             },
         )
@@ -202,7 +202,7 @@ def make_func(
     return new_func
 
 
-EXCLUDED_ATTRIBUTES = typing.EXCLUDED_ATTRIBUTES - {'__init__'}  # type: ignore[attr-defined]
+EXCLUDED_ATTRIBUTES = typing.EXCLUDED_ATTRIBUTES - {"__init__"}  # type: ignore[attr-defined]
 
 
 @contextlib.contextmanager
@@ -219,7 +219,7 @@ def _make_typevar_getattr_stuck():
 def get_annotations(
     obj: object,
     args: Mapping[str, object],
-    key: str = '__annotate__',
+    key: str = "__annotate__",
     cls: type | None = None,
     annos_ok: bool = True,
 ) -> Any | None:
@@ -431,10 +431,10 @@ def flatten_class_new_proto(cls: type) -> type:
 
     args = typing.get_args(cls)
     args_str = ", ".join(_type_repr(a) for a in args)
-    args_str = f'[{args_str}]' if args_str else ''
+    args_str = f"[{args_str}]" if args_str else ""
 
-    nt.__name__ = f'{cls.__name__}{args_str}'
-    nt.__qualname__ = f'{cls.__qualname__}{args_str}'
+    nt.__name__ = f"{cls.__name__}{args_str}"
+    nt.__qualname__ = f"{cls.__qualname__}{args_str}"
     del nt.__subclasshook__
 
     return nt

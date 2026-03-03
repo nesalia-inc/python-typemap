@@ -113,7 +113,7 @@ def test_eval_types_2():
     # I don't really think they ought to differ; something funny is
     # going on with recursively alias handling.
     res = format_helper.format_class(evaled)
-    res = res.replace('tests.test_type_eval.MapRecursive', 'MapRecursive')
+    res = res.replace("tests.test_type_eval.MapRecursive", "MapRecursive")
 
     assert res == textwrap.dedent("""\
         class MapRecursive[tests.test_type_eval.Recursive]:
@@ -1810,8 +1810,8 @@ def test_callable_to_signature_01():
     assert len(params) == 7
 
     assert str(sig) == (
-        '(_arg0: int, /, b: int, c: int = ..., *args: int, '
-        'd: int, e: int = ..., **kwargs: int) -> int'
+        "(_arg0: int, /, b: int, c: int = ..., *args: int, "
+        "d: int, e: int = ..., **kwargs: int) -> int"
     )
 
 
@@ -1836,9 +1836,9 @@ def test_callable_to_signature_02():
     ]
     sig = _callable_type_to_signature(callable_type)
     assert str(sig) == (
-        '(cls: tests.test_type_eval.test_callable_to_signature_02.<locals>.C, '
-        '_arg1: int, /, b: int, c: int = ..., *args: int, '
-        'd: int, e: int = ..., **kwargs: int) -> int'
+        "(cls: tests.test_type_eval.test_callable_to_signature_02.<locals>.C, "
+        "_arg1: int, /, b: int, c: int = ..., *args: int, "
+        "d: int, e: int = ..., **kwargs: int) -> int"
     )
 
 
@@ -1862,8 +1862,8 @@ def test_callable_to_signature_03():
     ]
     sig = _callable_type_to_signature(callable_type)
     assert str(sig) == (
-        '(_arg0: int, /, b: int, c: int = ..., *args: int, '
-        'd: int, e: int = ..., **kwargs: int) -> int'
+        "(_arg0: int, /, b: int, c: int = ..., *args: int, "
+        "d: int, e: int = ..., **kwargs: int) -> int"
     )
 
 
@@ -2591,7 +2591,7 @@ def test_update_class_empty_01():
 
 ##############
 
-type XTest[X] = Annotated[X, 'blah']
+type XTest[X] = Annotated[X, "blah"]
 
 
 class AnnoTest:

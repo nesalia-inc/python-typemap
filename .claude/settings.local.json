@@ -9,7 +9,8 @@
       "Bash(uv run python:*)",
       "Bash(python -c:*)",
       "Bash(python -m pytest:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(uv run ruff check .)"
     ]
   }
 }

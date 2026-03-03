@@ -18,7 +18,7 @@ from typemap_extensions import (
 
 from . import format_helper
 
-type OrGotcha[K] = K | Literal['gotcha!']
+type OrGotcha[K] = K | Literal["gotcha!"]
 
 type StrForInt[X] = (str | OrGotcha[X]) if X is int else (X | OrGotcha[X])
 
@@ -457,7 +457,7 @@ class AnnoyingProjection:
     def foo[T: typing.Member](self, a: T) -> T.name:
         pass
 
-    def bar[T: typing.Member](self, a: T) -> 'T.name':
+    def bar[T: typing.Member](self, a: T) -> "T.name":
         pass
 
 

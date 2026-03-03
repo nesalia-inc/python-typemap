@@ -111,7 +111,7 @@ class _GenericCallableGenericAlias(_GenericAlias, _root=True):
         else:
             # To ensure the repr is eval-able.
             args = "()"
-        return f'{name}[{args}]'
+        return f"{name}[{args}]"
 
 
 class GenericCallable:
@@ -152,8 +152,8 @@ class InitField[KwargDict: BaseTypedDict]:
         return self.__kwargs
 
     def __repr__(self) -> str:
-        args = ', '.join(f'{k}={v!r}' for k, v in self.__kwargs.items())
-        return f'{type(self).__name__}({args})'
+        args = ", ".join(f"{k}={v!r}" for k, v in self.__kwargs.items())
+        return f"{type(self).__name__}({args})"
 
 
 ###
