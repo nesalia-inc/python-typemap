@@ -20,3 +20,34 @@ build-backend = "hatchling.build"
 
 [tool.uv]
 package = true
+
+[tool.ruff.lint]
+preview = true
+extend-select = ["E", "F", "W"]
+extend-ignore = [
+    "E402",  # Module level import not at top of file
+    "E501",  # Line too long
+    "F401",  # Unused import
+    "F541",  # f-string without placeholders
+    "F821",  # Undefined name
+    "I001",  # Import block is un-sorted
+    "PERF401", # Use list.extend
+    "PLR1704", # Redefining argument
+    "PYI019", # Use Self instead of TypeVar
+    "PYI061", # Use None rather than Literal[None]
+    "RET504", # Unnecessary assignment
+    "RUF022", # __all__ is not sorted
+    "RUF100", # Unused noqa
+    "SIM102", # Nested if statements
+    "SIM114", # Combine if branches
+    "UP035",  # Import from collections.abc
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["E501", "E731", "F401", "F821", "I001", "PIE790", "PLW0602", "PLW1510", "PYI019", "PYI030", "PYI042", "PYI061", "RUF020", "SIM102", "TRY002", "TRY004", "UP006", "UP007", "UP035", "UP037", "UP044", "UP046"]
+"src/typemap/**/*.py" = ["E731", "PIE790", "PYI042", "SIM118", "UP007"]
+"typemap_extensions/**/*" = ["F403"]
+
+[tool.ruff]
+line-length = 80
+indent-width = 4

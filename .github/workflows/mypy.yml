@@ -2,9 +2,6 @@ name: Mypy
 
 on:
   push:
-    branches: [main, add-typemap-core]
-  pull_request:
-    branches: [main]
 
 jobs:
   mypy:
