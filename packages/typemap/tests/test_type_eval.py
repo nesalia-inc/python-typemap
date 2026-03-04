@@ -37,6 +37,7 @@ from typemap_extensions import (
     GetAnnotations,
     IsAssignable,
     Iter,
+    KeyOf,
     Length,
     IsEquivalent,
     Member,
@@ -2648,3 +2649,77 @@ def test_raise_error_with_literal_types():
         eval_typing(
             RaiseError[Literal["Shape mismatch"], Literal[4], Literal[3]]
         )
+
+
+##############
+# KeyOf tests
+
+
+def test_keyof_basic():
+    """Test KeyOf returns tuple of Literal member names."""
+
+    class User:
+        name: str
+        age: int
+        email: str
+
+    result = eval_typing(KeyOf[User])
+    assert (
+        result
+        == tuple[
+            Literal["name"],
+            Literal["age"],
+            Literal["email"],
+        ]
+    )
+
+
+def test_keyof_single_field():
+    """Test KeyOf with a single field class."""
+
+    class Single:
+        value: int
+
+    result = eval_typing(KeyOf[Single])
+    assert result == tuple[Literal["value"]]
+
+
+def test_keyof_empty_class():
+    """Test KeyOf with a class with no fields."""
+
+    class Empty:
+        pass
+
+    result = eval_typing(KeyOf[Empty])
+    assert result == Literal[()]
+
+
+def test_keyof_with_methods():
+    """Test KeyOf ignores methods and only returns field names."""
+
+    class WithMethods:
+        name: str
+
+        def method(self) -> None: ...
+
+    result = eval_typing(KeyOf[WithMethods])
+    assert result == tuple[Literal["name"]]
+
+
+def test_keyof_with_inheritance():
+    """Test KeyOf includes inherited fields."""
+
+    class Base:
+        id: int
+
+    class Child(Base):
+        name: str
+
+    result = eval_typing(KeyOf[Child])
+    assert (
+        result
+        == tuple[
+            Literal["id"],
+            Literal["name"],
+        ]
+    )
