@@ -24,6 +24,7 @@ from typemap.typing import (
     Bool,
     Capitalize,
     DropAnnotations,
+    DeepPartial,
     FromUnion,
     GenericCallable,
     GetAnnotations,
@@ -1250,6 +1251,75 @@ def _eval_RaiseError(msg, *extra_types, ctx):
         type_strs = ", ".join(repr(t) for t in extra_types)
         message = f"{message}: {type_strs}"
     raise TypeMapError(message)
+
+
+@type_eval.register_evaluator(DeepPartial)
+def _eval_DeepPartial(tp, *, ctx):
+    """Evaluate DeepPartial[T] to create a class with all fields optional.
+
+    For each field in T:
+    - If it's a primitive type, make it optional (T | None)
+    - If it's a complex type (class with attrs), recursively apply DeepPartial
+    - Create a new class with all optional fields
+    """
+    from typing import get_args
+
+    tp = _eval_types(tp, ctx)
+
+    # Get attributes using Attrs to get Member objects
+    attrs_result = _eval_Attrs(tp, ctx=ctx)
+    attrs_args = get_args(attrs_result)
+
+    if not attrs_args:
+        # No fields, return the original type
+        return tp
+
+    new_annotations = {}
+
+    for member in attrs_args:
+        # Get the member name and type
+        # member.name is an associated type, need to evaluate it
+        name_result = _eval_types(member.name, ctx)
+        name = (
+            get_args(name_result)[0]
+            if hasattr(name_result, "__args__")
+            else name_result
+        )
+
+        # member.type is an associated type, need to evaluate it
+        type_result = _eval_types(member.type, ctx)
+
+        # Check if this is a complex type (class with its own attributes)
+        if isinstance(type_result, type):
+            # Try to get attrs of this type, but don't recurse if it fails
+            # (nested types may not be in evaluation context)
+            try:
+                nested_attrs = _eval_Attrs(type_result, ctx=ctx)
+                nested_args = get_args(nested_attrs)
+                if nested_args:
+                    # Has nested fields - try to recursively apply
+                    # but catch any errors (e.g., NameError for undefined types)
+                    try:
+                        nested_partial = _eval_DeepPartial(type_result, ctx=ctx)
+                        new_annotations[name] = nested_partial | None
+                    except Exception:
+                        # If recursion fails, just make optional
+                        new_annotations[name] = type_result | None
+                else:
+                    # No nested fields, just make optional
+                    new_annotations[name] = type_result | None
+            except Exception:
+                # If we can't inspect it, just make optional
+                new_annotations[name] = type_result | None
+        else:
+            # Primitive or unknown type, just make optional
+            new_annotations[name] = type_result | None
+
+    # Create a new class with optional fields
+    class_name = (
+        f"DeepPartial_{tp.__name__ if hasattr(tp, '__name__') else 'Anonymous'}"
+    )
+    return type(class_name, (), {"__annotations__": new_annotations})
 
 
 ##################################################################
