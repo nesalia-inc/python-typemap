@@ -48,6 +48,7 @@ from typemap_extensions import (
     Slice,
     SpecialFormEllipsis,
     StrConcat,
+    Template,
     UpdateClass,
     Uppercase,
 )
@@ -2723,3 +2724,51 @@ def test_keyof_with_inheritance():
             Literal["name"],
         ]
     )
+
+
+##############
+# Template tests
+
+
+def test_template_basic():
+    """Test Template concatenates string literals."""
+
+    result = eval_typing(Template[Literal["hello"], Literal["world"]])
+    assert result == Literal["helloworld"]
+
+
+def test_template_with_variable():
+    """Test Template with a type variable."""
+
+    Resource = Literal["users"]
+    result = eval_typing(Template[Literal["/"], Resource, Literal["/id"]])
+    assert result == Literal["/users/id"]
+
+
+def test_template_single_part():
+    """Test Template with a single part."""
+
+    result = eval_typing(Template[Literal["hello"]])
+    assert result == Literal["hello"]
+
+
+def test_template_empty():
+    """Test Template with empty string."""
+
+    result = eval_typing(Template[Literal[""], Literal["hello"]])
+    assert result == Literal["hello"]
+
+
+def test_template_multiple_parts():
+    """Test Template with multiple parts forming a path."""
+
+    result = eval_typing(
+        Template[
+            Literal["api"],
+            Literal["/"],
+            Literal["v1"],
+            Literal["/"],
+            Literal["users"],
+        ]
+    )
+    assert result == Literal["api/v1/users"]
