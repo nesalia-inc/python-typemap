@@ -48,6 +48,7 @@ from typemap.typing import (
     Slice,
     SpecialFormEllipsis,
     StrConcat,
+    Template,
     Uncapitalize,
     UpdateClass,
     Uppercase,
@@ -1194,6 +1195,37 @@ _string_literal_op(Lowercase, op=str.lower)
 _string_literal_op(Capitalize, op=str.capitalize)
 _string_literal_op(Uncapitalize, op=lambda s: s[0:1].lower() + s[1:])
 _string_literal_op(StrConcat, op=lambda s, t: s + t)
+
+
+@type_eval.register_evaluator(Template)
+def _eval_Template(*parts, ctx):
+    """Evaluate Template to concatenate all string parts."""
+    evaluated_parts = []
+    for part in parts:
+        evaled = _eval_types(part, ctx)
+        if _typing_inspect.is_generic_alias(evaled):
+            if evaled.__origin__ is typing.Literal:
+                # Extract literal string value
+                lit_val = evaled.__args__[0]
+                if isinstance(lit_val, str):
+                    evaluated_parts.append(lit_val)
+                else:
+                    raise TypeError(
+                        f"Template parts must be string literals, got {lit_val}"
+                    )
+            else:
+                raise TypeError(
+                    f"Template parts must be string literals, got {evaled}"
+                )
+        elif isinstance(evaled, str):
+            # Plain string (shouldn't happen but handle it)
+            evaluated_parts.append(evaled)
+        else:
+            raise TypeError(
+                f"Template parts must be string literals, got {type(evaled)}"
+            )
+
+    return typing.Literal["".join(evaluated_parts)]
 
 
 ##################################################################
