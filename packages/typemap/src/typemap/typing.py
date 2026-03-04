@@ -262,6 +262,19 @@ class Length[S: tuple]:
     pass
 
 
+class KeyOf[T]:
+    """Return all member names as a tuple.
+
+    Usage:
+        type Keys = KeyOf[User]
+        # Returns tuple[Literal['name'], Literal['email'], Literal['age']]
+
+    This is similar to TypeScript's keyof operator.
+    """
+
+    pass
+
+
 class Slice[S: str | tuple, Start: int | None, End: int | None](
     _TupleLikeOperator
 ):
