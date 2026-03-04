@@ -1,0 +1,27 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  pypi:
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v4
+
+      - name: Set up Python
+        run: uv python install 3.14
+
+      - name: Build
+        working-directory: packages/typemap
+        run: uv build --no-sources
+
+      - name: Publish to PyPI
+        working-directory: packages/typemap
+        run: uv publish --token "${{ secrets.PYPI_TOKEN }}"
