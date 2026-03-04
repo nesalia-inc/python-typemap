@@ -301,6 +301,19 @@ class StrConcat[S: str, T: str]:
     pass
 
 
+class Template[*Parts]:
+    """Template literal string builder.
+
+    Usage:
+        type Route = Template['/', Resource, '/id']
+        # For Resource = 'users', returns: '/users/id'
+
+    This allows building string templates from parts that get concatenated.
+    """
+
+    pass
+
+
 class NewProtocol[*T]:
     pass
 
