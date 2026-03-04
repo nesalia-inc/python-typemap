@@ -36,6 +36,7 @@ from typemap.typing import (
     IsAssignable,
     IsEquivalent,
     Iter,
+    KeyOf,
     Length,
     Lowercase,
     Member,
@@ -1136,6 +1137,27 @@ def _eval_Length(tp, *, ctx) -> typing.Any:
     else:
         # XXX: Or should we return Never?
         raise TypeError(f"Invalid type argument to Length: {tp} is not a tuple")
+
+
+@type_eval.register_evaluator(KeyOf)
+@_lift_over_unions
+def _eval_KeyOf(tp, *, ctx):
+    """Evaluate KeyOf[T] to get all member names as a tuple of Literals."""
+    tp = _eval_types(tp, ctx)
+    hints = get_annotated_type_hints(
+        tp, include_extras=True, attrs_only=True, ctx=ctx
+    )
+
+    if not hints:
+        return typing.Literal[()]
+
+    # Extract member names and create tuple of Literal types
+    names = []
+    for name in hints:
+        names.append(typing.Literal[name])
+
+    # Return as tuple of Literal types (use unpacking to make it hashable)
+    return tuple[*names]  # type: ignore[return-value]
 
 
 @type_eval.register_evaluator(Slice)
