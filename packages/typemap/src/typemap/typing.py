@@ -335,6 +335,22 @@ class RaiseError[S: str, *Ts]:
     pass
 
 
+class DeepPartial[T]:
+    """Make all fields recursively optional.
+
+    For each field in T:
+    - If it's a primitive type (int, str, etc.), make it optional
+    - If it's a complex type (class with attrs), recursively apply DeepPartial
+
+    Usage:
+        type DeepUser = DeepPartial[User]
+
+    Note: This creates a new class at runtime with all fields optional.
+    """
+
+    pass
+
+
 ##################################################################
 
 # TODO: type better
