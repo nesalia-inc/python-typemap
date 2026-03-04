@@ -1302,13 +1302,13 @@ def _eval_DeepPartial(tp, *, ctx):
                     try:
                         nested_partial = _eval_DeepPartial(type_result, ctx=ctx)
                         new_annotations[name] = nested_partial | None
-                    except Exception:
+                    except NameError, TypeError:
                         # If recursion fails, just make optional
                         new_annotations[name] = type_result | None
                 else:
                     # No nested fields, just make optional
                     new_annotations[name] = type_result | None
-            except Exception:
+            except NameError, TypeError, AttributeError:
                 # If we can't inspect it, just make optional
                 new_annotations[name] = type_result | None
         else:
