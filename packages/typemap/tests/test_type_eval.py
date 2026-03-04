@@ -27,6 +27,7 @@ from typemap.typing import _BoolLiteral
 from typemap_extensions import (
     Attrs,
     Bool,
+    DeepPartial,
     FromUnion,
     GenericCallable,
     GetArg,
@@ -2772,3 +2773,55 @@ def test_template_multiple_parts():
         ]
     )
     assert result == Literal["api/v1/users"]
+
+
+##############
+# DeepPartial tests
+
+
+def test_deep_partial_basic():
+    """Test DeepPartial makes all fields optional."""
+
+    class User:
+        name: str
+        age: int
+
+    result = eval_typing(DeepPartial[User])
+    assert result.__annotations__["name"] == str | None
+    assert result.__annotations__["age"] == int | None
+
+
+def test_deep_partial_multiple_fields():
+    """Test DeepPartial with multiple fields of different types."""
+
+    class User:
+        name: str
+        age: int
+        email: str
+        active: bool
+
+    result = eval_typing(DeepPartial[User])
+    assert result.__annotations__["name"] == str | None
+    assert result.__annotations__["age"] == int | None
+    assert result.__annotations__["email"] == str | None
+    assert result.__annotations__["active"] == bool | None
+
+
+def test_deep_partial_empty_class():
+    """Test DeepPartial with a class that has no fields."""
+
+    class Empty:
+        pass
+
+    result = eval_typing(DeepPartial[Empty])
+    assert result == Empty
+
+
+def test_deep_partial_preserves_name():
+    """Test DeepPartial creates a class with meaningful name."""
+
+    class User:
+        name: str
+
+    result = eval_typing(DeepPartial[User])
+    assert "DeepPartial" in result.__name__
