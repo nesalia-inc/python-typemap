@@ -23,8 +23,8 @@ from typemap.typing import (
     Attrs,
     Bool,
     Capitalize,
-    DropAnnotations,
     DeepPartial,
+    DropAnnotations,
     FromUnion,
     GenericCallable,
     GetAnnotations,
@@ -45,7 +45,9 @@ from typemap.typing import (
     NewProtocol,
     Overloaded,
     Param,
+    Partial,
     RaiseError,
+    Required,
     Slice,
     SpecialFormEllipsis,
     StrConcat,
@@ -1302,13 +1304,13 @@ def _eval_DeepPartial(tp, *, ctx):
                     try:
                         nested_partial = _eval_DeepPartial(type_result, ctx=ctx)
                         new_annotations[name] = nested_partial | None
-                    except NameError, TypeError:
+                    except (NameError, TypeError):
                         # If recursion fails, just make optional
                         new_annotations[name] = type_result | None
                 else:
                     # No nested fields, just make optional
                     new_annotations[name] = type_result | None
-            except NameError, TypeError, AttributeError:
+            except (NameError, TypeError, AttributeError):
                 # If we can't inspect it, just make optional
                 new_annotations[name] = type_result | None
         else:
@@ -1318,6 +1320,119 @@ def _eval_DeepPartial(tp, *, ctx):
     # Create a new class with optional fields
     class_name = (
         f"DeepPartial_{tp.__name__ if hasattr(tp, '__name__') else 'Anonymous'}"
+    )
+    return type(class_name, (), {"__annotations__": new_annotations})
+
+
+@type_eval.register_evaluator(Partial)
+def _eval_Partial(tp, *, ctx):
+    """Evaluate Partial[T] to create a class with all fields optional (non-recursive).
+
+    For each field in T, make it optional (T | None).
+    Unlike DeepPartial, this does not recursively apply to nested types.
+    """
+    from typing import get_args
+
+    tp = _eval_types(tp, ctx)
+
+    # Get attributes using Attrs to get Member objects
+    attrs_result = _eval_Attrs(tp, ctx=ctx)
+    attrs_args = get_args(attrs_result)
+
+    if not attrs_args:
+        # No fields, return the original type
+        return tp
+
+    new_annotations = {}
+
+    for member in attrs_args:
+        # Get the member name and type
+        # member.name is an associated type, need to evaluate it
+        name_result = _eval_types(member.name, ctx)
+        name = (
+            get_args(name_result)[0]
+            if hasattr(name_result, "__args__")
+            else name_result
+        )
+
+        # member.type is an associated type, need to evaluate it
+        # Simply make it optional - no recursion like DeepPartial
+        # Catch errors in case the type is not in evaluation context
+        try:
+            type_result = _eval_types(member.type, ctx)
+            new_annotations[name] = type_result | None
+        except (NameError, TypeError, AttributeError):
+            # If we can't evaluate the type, use Any | None
+            new_annotations[name] = typing.Any | None
+
+    # Create a new class with optional fields
+    class_name = (
+        f"Partial_{tp.__name__ if hasattr(tp, '__name__') else 'Anonymous'}"
+    )
+    return type(class_name, (), {"__annotations__": new_annotations})
+
+
+@type_eval.register_evaluator(Required)
+def _eval_Required(tp, *, ctx):
+    """Evaluate Required[T] to remove Optional from all fields.
+
+    This attempts to remove None from union types for each field.
+    Note: This is a best-effort implementation and may not work
+    in all cases, especially with complex type hierarchies.
+    """
+    from typing import get_args
+
+    tp = _eval_types(tp, ctx)
+
+    # Get attributes using Attrs to get Member objects
+    attrs_result = _eval_Attrs(tp, ctx=ctx)
+    attrs_args = get_args(attrs_result)
+
+    if not attrs_args:
+        # No fields, return the original type
+        return tp
+
+    new_annotations = {}
+
+    for member in attrs_args:
+        # Get the member name and type
+        name_result = _eval_types(member.name, ctx)
+        name = (
+            get_args(name_result)[0]
+            if hasattr(name_result, "__args__")
+            else name_result
+        )
+
+        # member.type is an associated type, need to evaluate it
+        type_result = _eval_types(member.type, ctx)
+
+        # Remove None from the type union if it's a Union with None
+        if isinstance(type_result, types.UnionType):
+            # Filter out None from the union
+            non_none_args = [arg for arg in type_result.__args__ if arg is not type(None)]
+            if len(non_none_args) == 1:
+                new_annotations[name] = non_none_args[0]
+            elif len(non_none_args) > 1:
+                new_annotations[name] = types.UnionType(*non_none_args)
+            else:
+                # All were None, which is unusual
+                new_annotations[name] = type_result
+        elif hasattr(type_result, "__origin__") and type_result.__origin__ is typing.Union:
+            # Handle typing.Union form
+            non_none_args = [arg for arg in get_args(type_result) if arg is not type(None)]
+            if len(non_none_args) == 1:
+                new_annotations[name] = non_none_args[0]
+            elif len(non_none_args) > 1:
+                new_annotations[name] = typing.Union[*non_none_args]
+            else:
+                new_annotations[name] = type_result
+        else:
+            # Not a union type, keep as is
+            new_annotations[name] = type_result
+
+    # Create a new class with required fields
+    class_name = (
+        f"Required_{tp.__name__ if hasattr(tp, '__name__') else 'Anonymous'}"
     )
     return type(class_name, (), {"__annotations__": new_annotations})
 

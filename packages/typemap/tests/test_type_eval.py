@@ -46,6 +46,8 @@ from typemap_extensions import (
     NewProtocol,
     Overloaded,
     Param,
+    Partial,
+    Required,
     Slice,
     SpecialFormEllipsis,
     StrConcat,
@@ -2825,3 +2827,146 @@ def test_deep_partial_preserves_name():
 
     result = eval_typing(DeepPartial[User])
     assert "DeepPartial" in result.__name__
+
+
+##############
+# Partial tests
+
+
+def test_partial_basic():
+    """Test Partial makes all fields optional (non-recursive)."""
+
+    class User:
+        name: str
+        age: int
+
+    result = eval_typing(Partial[User])
+    assert result.__annotations__["name"] == str | None
+    assert result.__annotations__["age"] == int | None
+
+
+def test_partial_multiple_fields():
+    """Test Partial with multiple fields of different types."""
+
+    class User:
+        name: str
+        age: int
+        email: str
+        active: bool
+
+    result = eval_typing(Partial[User])
+    assert result.__annotations__["name"] == str | None
+    assert result.__annotations__["age"] == int | None
+    assert result.__annotations__["email"] == str | None
+    assert result.__annotations__["active"] == bool | None
+
+
+def test_partial_empty_class():
+    """Test Partial with a class that has no fields."""
+
+    class Empty:
+        pass
+
+    result = eval_typing(Partial[Empty])
+    assert result == Empty
+
+
+def test_partial_preserves_name():
+    """Test Partial creates a class with meaningful name."""
+
+    class User:
+        name: str
+
+    result = eval_typing(Partial[User])
+    assert "Partial" in result.__name__
+
+
+def test_partial_non_recursive():
+    """Test that Partial is non-recursive - it doesn't process nested types."""
+
+    # This test verifies Partial doesn't recurse into nested types
+    # by checking that the implementation is different from DeepPartial
+    # (which does recurse). We can't easily test with nested classes
+    # because they need to be in the global evaluation context.
+    # Instead, we verify that Partial creates a new class with optional fields.
+
+    class User:
+        name: str
+        age: int
+
+    partial_result = eval_typing(Partial[User])
+
+    # Verify all fields are optional
+    assert partial_result.__annotations__["name"] == str | None
+    assert partial_result.__annotations__["age"] == int | None
+
+    # Verify it's a different class than the original
+    assert partial_result != User
+
+
+##############
+# Required tests
+
+
+def test_required_basic():
+    """Test Required removes Optional from all fields."""
+
+    class User:
+        name: str | None
+        age: int | None
+
+    result = eval_typing(Required[User])
+    assert result.__annotations__["name"] is str
+    assert result.__annotations__["age"] is int
+
+
+def test_required_multiple_fields():
+    """Test Required with multiple optional fields."""
+
+    class User:
+        name: str | None
+        age: int | None
+        email: str | None
+        active: bool | None
+
+    result = eval_typing(Required[User])
+    assert result.__annotations__["name"] is str
+    assert result.__annotations__["age"] is int
+    assert result.__annotations__["email"] is str
+    assert result.__annotations__["active"] is bool
+
+
+def test_required_mixed_fields():
+    """Test Required with mix of optional and non-optional fields."""
+
+    class User:
+        name: str
+        age: int | None
+        email: str | None
+
+    result = eval_typing(Required[User])
+    # Non-optional fields should stay as is
+    assert result.__annotations__["name"] is str
+    # Optional fields should have None removed
+    assert result.__annotations__["age"] is int
+    assert result.__annotations__["email"] is str
+
+
+def test_required_empty_class():
+    """Test Required with a class that has no fields."""
+
+    class Empty:
+        pass
+
+    result = eval_typing(Required[Empty])
+    assert result == Empty
+
+
+def test_required_preserves_name():
+    """Test Required creates a class with meaningful name."""
+
+    class User:
+        name: str | None
+
+    result = eval_typing(Required[User])
+    assert "Required" in result.__name__

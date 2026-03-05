@@ -351,6 +351,32 @@ class DeepPartial[T]:
     pass
 
 
+class Partial[T]:
+    """Make all fields optional (non-recursive).
+
+    For each field in T, make it optional (T | None).
+    Unlike DeepPartial, this does not recursively apply to nested types.
+
+    Usage:
+        type PartialUser = Partial[User]
+    """
+
+    pass
+
+
+class Required[T]:
+    """Make all fields required (remove Optional).
+
+    This is the inverse of Partial - it removes None from field types.
+    Note: This is primarily useful for TypedDict or similar types.
+
+    Usage:
+        type RequiredUser = Required[SomeOptionalType]
+    """
+
+    pass
+
+
 ##################################################################
 
 # TODO: type better
