@@ -292,6 +292,21 @@ class NewProtocol[*T]:
     pass
 
 
+class NewTypedDict[*T]:
+    """Create a new TypedDict from Member types.
+
+    Usage:
+        type MyDict = NewTypedDict[
+            Member[Literal["name"], str],
+            Member[Literal["age"], int],
+        ]
+
+    This creates a TypedDict with name: str and age: int fields.
+    """
+
+    pass
+
+
 class UpdateClass[*Ms]:
     pass
 

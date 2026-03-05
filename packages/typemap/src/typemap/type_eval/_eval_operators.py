@@ -43,6 +43,7 @@ from typemap.typing import (
     Member,
     Members,
     NewProtocol,
+    NewTypedDict,
     Omit,
     Overloaded,
     Param,
@@ -1289,6 +1290,38 @@ def _eval_NewProtocol(*etyps: Member, ctx):
         cls.__init__ = dct["__init__"]
 
     return cls
+
+
+@type_eval.register_evaluator(NewTypedDict)
+@_lift_evaluated
+def _eval_NewTypedDict(*etyps: Member, ctx):
+    """Evaluate NewTypedDict to create a TypedDict from Member types."""
+    annos: dict[str, object] = {}
+
+    members = [typing.get_args(prop) for prop in etyps]
+    for tname, typ, quals, init, _ in members:
+        name = _eval_literal(tname, ctx)
+        typ = _eval_types(typ, ctx)
+        tquals = _eval_types(quals, ctx)
+
+        # Handle NotRequired qualifier for TypedDict
+        if type_eval.issubtype(typing.Literal["NotRequired"], tquals):
+            # NotRequired means the field is optional
+            # In TypedDict, this is handled differently
+            annos[name] = typing.Annotated[typ, typing.NotRequired]
+        else:
+            annos[name] = typ
+
+    # Get the name from context if available
+    name = "NewTypedDict"
+
+    ctx = type_eval._get_current_context()
+    if ctx.current_generic_alias:
+        if isinstance(ctx.current_generic_alias, types.GenericAlias):
+            name = f"{ctx.current_generic_alias.__name__}[...]"
+
+    # Create the TypedDict
+    return typing.TypedDict(name, annos)
 
 
 @type_eval.register_evaluator(KeyOf)

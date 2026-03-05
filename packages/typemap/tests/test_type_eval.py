@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import collections
 import textwrap
+import typing
 import unittest
 from typing import (
     Annotated,
@@ -44,6 +45,7 @@ from typemap_extensions import (
     Member,
     Members,
     NewProtocol,
+    NewTypedDict,
     Omit,
     Overloaded,
     Param,
@@ -3215,3 +3217,110 @@ def test_omit_all_fields():
     result = eval_typing(Omit[User, tuple["name", "age"]])
     # All fields should be omitted, resulting in empty annotations
     assert len(result.__annotations__) == 0
+
+
+###############
+# NewTypedDict tests
+
+
+def test_newtypeddict_basic():
+    """Test NewTypedDict creates a TypedDict from Member types."""
+
+    result = eval_typing(
+        NewTypedDict[
+            Member[Literal["name"], str],
+            Member[Literal["age"], int],
+        ]
+    )
+    assert result.__annotations__["name"] is str
+    assert result.__annotations__["age"] is int
+
+
+def test_newtypeddict_single_field():
+    """Test NewTypedDict with a single field."""
+
+    result = eval_typing(NewTypedDict[Member[Literal["value"], int],])
+    assert "value" in result.__annotations__
+    assert result.__annotations__["value"] is int
+
+
+def test_newtypeddict_preserves_types():
+    """Test NewTypedDict preserves correct types."""
+
+    result = eval_typing(
+        NewTypedDict[
+            Member[Literal["name"], str],
+            Member[Literal["age"], int],
+            Member[Literal["active"], bool],
+        ]
+    )
+    assert result.__annotations__["name"] is str
+    assert result.__annotations__["age"] is int
+    assert result.__annotations__["active"] is bool
+
+
+def test_newtypeddict_with_complex_types():
+    """Test NewTypedDict with complex types."""
+
+    result = eval_typing(
+        NewTypedDict[
+            Member[Literal["users"], list[str]],
+            Member[Literal["metadata"], dict[str, int]],
+        ]
+    )
+    assert result.__annotations__["users"] == list[str]
+    assert result.__annotations__["metadata"] == dict[str, int]
+
+
+def test_newtypeddict_multiple_fields():
+    """Test NewTypedDict with multiple fields."""
+
+    result = eval_typing(
+        NewTypedDict[
+            Member[Literal["id"], int],
+            Member[Literal["title"], str],
+            Member[Literal["description"], str],
+            Member[Literal["count"], int],
+            Member[Literal["enabled"], bool],
+        ]
+    )
+    assert "id" in result.__annotations__
+    assert "title" in result.__annotations__
+    assert "description" in result.__annotations__
+    assert "count" in result.__annotations__
+    assert "enabled" in result.__annotations__
+    assert len(result.__annotations__) == 5
+
+
+def test_newtypeddict_optional_field():
+    """Test NewTypedDict with NotRequired qualifier makes field optional."""
+
+    result = eval_typing(
+        NewTypedDict[
+            Member[Literal["required_field"], str],
+            Member[Literal["optional_field"], int, Literal["NotRequired"]],
+        ]
+    )
+    assert result.__annotations__["required_field"] is str
+    # NotRequired fields should be wrapped with Annotated
+    assert hasattr(result.__annotations__["optional_field"], "__metadata__")
+
+
+def test_newtypeddict_with_iter_attrs():
+    """Test NewTypedDict using Iter and Attrs to create from existing class."""
+
+    class User:
+        name: str
+        age: int
+        email: str
+
+    # Get the Member types from the User class
+    members = list(eval_typing(Iter[Attrs[User]]))
+
+    # Create NewTypedDict from those members
+    result = eval_typing(
+        NewTypedDict[*[Member[m.name, m.type] for m in members]]
+    )
+    assert "name" in result.__annotations__
+    assert "age" in result.__annotations__
+    assert "email" in result.__annotations__
