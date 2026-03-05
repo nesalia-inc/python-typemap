@@ -1321,7 +1321,12 @@ def _eval_NewTypedDict(*etyps: Member, ctx):
             name = f"{ctx.current_generic_alias.__name__}[...]"
 
     # Create the TypedDict
-    return typing.TypedDict(name, annos)
+    # Use cast to make mypy happy - TypedDict is callable at runtime
+    td_callable = typing.cast(
+        typing.Callable[[str, dict[str, object]], type],
+        typing.TypedDict,
+    )
+    return td_callable(name, annos)
 
 
 @type_eval.register_evaluator(KeyOf)
