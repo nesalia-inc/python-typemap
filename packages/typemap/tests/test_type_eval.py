@@ -3306,6 +3306,34 @@ def test_newtypeddict_optional_field():
     assert hasattr(result.__annotations__["optional_field"], "__metadata__")
 
 
+def test_newtypeddict_readonly_field():
+    """Test NewTypedDict with ReadOnly qualifier marks field as read-only."""
+
+    result = eval_typing(
+        NewTypedDict[
+            Member[Literal["id"], int],
+            Member[Literal["name"], str, Literal["ReadOnly"]],
+        ]
+    )
+    assert result.__annotations__["id"] is int
+    # ReadOnly fields should be wrapped with Annotated
+    assert hasattr(result.__annotations__["name"], "__metadata__")
+
+
+def test_newtypeddict_multiple_qualifiers():
+    """Test NewTypedDict with both NotRequired and ReadOnly qualifiers."""
+
+    result = eval_typing(
+        NewTypedDict[
+            Member[Literal["id"], int, Literal["ReadOnly"]],
+            Member[Literal["optional_name"], str, Literal["NotRequired", "ReadOnly"]],
+        ]
+    )
+    # Both should have metadata
+    assert hasattr(result.__annotations__["id"], "__metadata__")
+    assert hasattr(result.__annotations__["optional_name"], "__metadata__")
+
+
 def test_newtypeddict_with_iter_attrs():
     """Test NewTypedDict using Iter and Attrs to create from existing class."""
 

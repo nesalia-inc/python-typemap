@@ -1304,11 +1304,15 @@ def _eval_NewTypedDict(*etyps: Member, ctx):
         typ = _eval_types(typ, ctx)
         tquals = _eval_types(quals, ctx)
 
-        # Handle NotRequired qualifier for TypedDict
+        # Handle qualifiers for TypedDict fields
+        annotations = []
         if type_eval.issubtype(typing.Literal["NotRequired"], tquals):
-            # NotRequired means the field is optional
-            # In TypedDict, this is handled differently
-            annos[name] = typing.Annotated[typ, typing.NotRequired]
+            annotations.append(typing.NotRequired)
+        if type_eval.issubtype(typing.Literal["ReadOnly"], tquals):
+            annotations.append(typing.ReadOnly)
+
+        if annotations:
+            annos[name] = typing.Annotated[typ, *annotations]
         else:
             annos[name] = typ
 
