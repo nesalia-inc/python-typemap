@@ -44,9 +44,11 @@ from typemap_extensions import (
     Member,
     Members,
     NewProtocol,
+    Omit,
     Overloaded,
     Param,
     Partial,
+    Pick,
     Required,
     Slice,
     SpecialFormEllipsis,
@@ -2970,3 +2972,144 @@ def test_required_preserves_name():
 
     result = eval_typing(Required[User])
     assert "Required" in result.__name__
+
+
+##############
+# Pick tests
+
+
+def test_pick_basic():
+    """Test Pick selects specific fields from a type."""
+
+    class User:
+        name: str
+        age: int
+        email: str
+        password: str
+
+    result = eval_typing(Pick[User, tuple["name", "email"]])
+    assert "name" in result.__annotations__
+    assert "email" in result.__annotations__
+    assert "age" not in result.__annotations__
+    assert "password" not in result.__annotations__
+
+
+def test_pick_single_field():
+    """Test Pick with a single field."""
+
+    class User:
+        name: str
+        age: int
+        email: str
+
+    result = eval_typing(Pick[User, tuple["name"]])
+    assert "name" in result.__annotations__
+    assert len(result.__annotations__) == 1
+
+
+def test_pick_preserves_types():
+    """Test Pick preserves the correct types."""
+
+    class User:
+        name: str
+        age: int
+
+    result = eval_typing(Pick[User, tuple["name", "age"]])
+    assert result.__annotations__["name"] is str
+    assert result.__annotations__["age"] is int
+
+
+def test_pick_preserves_name():
+    """Test Pick creates a class with meaningful name."""
+
+    class User:
+        name: str
+
+    result = eval_typing(Pick[User, tuple["name"]])
+    assert "Pick" in result.__name__
+
+
+def test_pick_all_fields():
+    """Test Pick with all fields selected."""
+
+    class User:
+        name: str
+        age: int
+
+    result = eval_typing(Pick[User, tuple["name", "age"]])
+    assert "name" in result.__annotations__
+    assert "age" in result.__annotations__
+
+
+##############
+# Omit tests
+
+
+def test_omit_basic():
+    """Test Omit excludes specific fields from a type."""
+
+    class User:
+        name: str
+        age: int
+        email: str
+        password: str
+
+    result = eval_typing(Omit[User, tuple["password"]])
+    assert "name" in result.__annotations__
+    assert "age" in result.__annotations__
+    assert "email" in result.__annotations__
+    assert "password" not in result.__annotations__
+
+
+def test_omit_single_field():
+    """Test Omit with a single field."""
+
+    class User:
+        name: str
+        age: int
+        email: str
+
+    result = eval_typing(Omit[User, tuple["age"]])
+    assert "name" in result.__annotations__
+    assert "email" in result.__annotations__
+    assert "age" not in result.__annotations__
+
+
+def test_omit_preserves_types():
+    """Test Omit preserves the correct types."""
+
+    class User:
+        name: str
+        age: int
+
+    result = eval_typing(Omit[User, tuple[()]])
+    assert result.__annotations__["name"] is str
+    assert result.__annotations__["age"] is int
+
+
+def test_omit_preserves_name():
+    """Test Omit creates a class with meaningful name."""
+
+    class User:
+        name: str
+
+    result = eval_typing(Omit[User, tuple[()]])
+    assert "Omit" in result.__name__
+
+
+def test_omit_multiple_fields():
+    """Test Omit with multiple fields excluded."""
+
+    class User:
+        name: str
+        age: int
+        email: str
+        password: str
+        active: bool
+
+    result = eval_typing(Omit[User, tuple["password", "active"]])
+    assert "name" in result.__annotations__
+    assert "age" in result.__annotations__
+    assert "email" in result.__annotations__
+    assert "password" not in result.__annotations__
+    assert "active" not in result.__annotations__

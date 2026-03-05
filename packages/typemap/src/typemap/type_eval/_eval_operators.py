@@ -43,9 +43,11 @@ from typemap.typing import (
     Member,
     Members,
     NewProtocol,
+    Omit,
     Overloaded,
     Param,
     Partial,
+    Pick,
     RaiseError,
     Required,
     Slice,
@@ -1433,6 +1435,114 @@ def _eval_Required(tp, *, ctx):
     # Create a new class with required fields
     class_name = (
         f"Required_{tp.__name__ if hasattr(tp, '__name__') else 'Anonymous'}"
+    )
+    return type(class_name, (), {"__annotations__": new_annotations})
+
+
+@type_eval.register_evaluator(Pick)
+def _eval_Pick(tp, keys, *, ctx):
+    """Evaluate Pick[T, K] to create a class with only specified fields.
+
+    Creates a new type with only the fields specified in K (a tuple of field names).
+    """
+    from typing import get_args
+
+    tp = _eval_types(tp, ctx)
+
+    # Get the keys to pick - should be a tuple of Literal strings
+    keys = _eval_types(keys, ctx)
+
+    # Extract key names from the tuple
+    if hasattr(keys, "__args__"):
+        key_names = tuple(get_args(keys))
+    else:
+        key_names = ()
+
+    # Get attributes using Attrs
+    attrs_result = _eval_Attrs(tp, ctx=ctx)
+    attrs_args = get_args(attrs_result)
+
+    if not attrs_args:
+        # No fields, return the original type
+        return tp
+
+    new_annotations = {}
+
+    for member in attrs_args:
+        # Get the member name
+        name_result = _eval_types(member.name, ctx)
+        name = (
+            get_args(name_result)[0]
+            if hasattr(name_result, "__args__")
+            else name_result
+        )
+
+        # Only include fields that are in the keys tuple
+        if name in key_names:
+            # Get the member type
+            try:
+                type_result = _eval_types(member.type, ctx)
+                new_annotations[name] = type_result
+            except (NameError, TypeError, AttributeError):
+                new_annotations[name] = typing.Any
+
+    # Create a new class with only picked fields
+    class_name = (
+        f"Pick_{tp.__name__ if hasattr(tp, '__name__') else 'Anonymous'}"
+    )
+    return type(class_name, (), {"__annotations__": new_annotations})
+
+
+@type_eval.register_evaluator(Omit)
+def _eval_Omit(tp, keys, *, ctx):
+    """Evaluate Omit[T, K] to create a class excluding specified fields.
+
+    Creates a new type with all fields from T except those specified in K.
+    """
+    from typing import get_args
+
+    tp = _eval_types(tp, ctx)
+
+    # Get the keys to omit - should be a tuple of Literal strings
+    keys = _eval_types(keys, ctx)
+
+    # Extract key names from the tuple
+    if hasattr(keys, "__args__"):
+        key_names = set(get_args(keys))
+    else:
+        key_names = set()
+
+    # Get attributes using Attrs
+    attrs_result = _eval_Attrs(tp, ctx=ctx)
+    attrs_args = get_args(attrs_result)
+
+    if not attrs_args:
+        # No fields, return the original type
+        return tp
+
+    new_annotations = {}
+
+    for member in attrs_args:
+        # Get the member name
+        name_result = _eval_types(member.name, ctx)
+        name = (
+            get_args(name_result)[0]
+            if hasattr(name_result, "__args__")
+            else name_result
+        )
+
+        # Skip fields that are in the keys tuple
+        if name not in key_names:
+            # Get the member type
+            try:
+                type_result = _eval_types(member.type, ctx)
+                new_annotations[name] = type_result
+            except (NameError, TypeError, AttributeError):
+                new_annotations[name] = typing.Any
+
+    # Create a new class without omitted fields
+    class_name = (
+        f"Omit_{tp.__name__ if hasattr(tp, '__name__') else 'Anonymous'}"
     )
     return type(class_name, (), {"__annotations__": new_annotations})
 

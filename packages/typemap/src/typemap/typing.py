@@ -377,6 +377,32 @@ class Required[T]:
     pass
 
 
+class Pick[T, K]:
+    """Pick specific fields from a type.
+
+    Creates a new type with only the specified fields from T.
+    K should be a tuple of field names to pick.
+
+    Usage:
+        type UserNameAndEmail = Pick[User, tuple['name', 'email']]
+    """
+
+    pass
+
+
+class Omit[T, K]:
+    """Omit specific fields from a type.
+
+    Creates a new type with all fields from T except those specified in K.
+    K should be a tuple of field names to omit.
+
+    Usage:
+        type UserWithoutPassword = Omit[User, tuple['password']]
+    """
+
+    pass
+
+
 ##################################################################
 
 # TODO: type better
