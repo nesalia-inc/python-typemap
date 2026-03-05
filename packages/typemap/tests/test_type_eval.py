@@ -2785,6 +2785,69 @@ def test_template_empty_parameterization():
     assert result is not None
 
 
+###############
+# GenericCallable tests
+
+
+def test_generic_callable_basic():
+    """Test GenericCallable with a single TypeVar."""
+
+    T = TypeVar("T")
+
+    gc = GenericCallable[tuple[T], lambda T: Callable[[T], T]]
+    result = eval_typing(gc)
+    # GenericCallable returns as-is when evaluated (no transformation)
+    assert result is not typing.Never
+    assert "GenericCallable" in repr(result)
+
+
+def test_generic_callable_in_member():
+    """Test GenericCallable used within a Member type."""
+
+    T = TypeVar("T")
+
+    # Create a Member with GenericCallable as the type
+    member = Member[
+        Literal["process"],
+        GenericCallable[tuple[T], lambda T: Callable[[T], T]],
+    ]
+    result = eval_typing(member)
+    assert result is not typing.Never
+
+
+def test_generic_callable_getarg_typevars():
+    """Test GetArg on GenericCallable returns typevars tuple."""
+
+    T = TypeVar("T")
+
+    gc = GenericCallable[tuple[T], lambda T: Callable[[T], T]]
+    typevars = eval_typing(GetArg[gc, GenericCallable, Literal[0]])
+    # Should return the typevars tuple
+    assert typevars is not typing.Never
+
+
+def test_generic_callable_getarg_callable():
+    """Test GetArg on GenericCallable returns Never for callable (as per existing behavior)."""
+
+    T = TypeVar("T")
+
+    gc = GenericCallable[tuple[T], lambda T: Callable[[T], T]]
+    callable_part = eval_typing(GetArg[gc, GenericCallable, Literal[1]])
+    # This returns Never per existing implementation
+    assert callable_part is typing.Never
+
+
+def test_generic_callable_getargs():
+    """Test GetArgs on GenericCallable returns typevars tuple."""
+
+    T = TypeVar("T")
+
+    gc = GenericCallable[tuple[T], lambda T: Callable[[T], T]]
+    args = eval_typing(GetArgs[gc, GenericCallable])
+    # Should return tuple containing the typevars
+    assert args is not typing.Never
+
+
 ##############
 # DeepPartial tests
 

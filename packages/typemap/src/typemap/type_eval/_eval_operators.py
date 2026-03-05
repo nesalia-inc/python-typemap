@@ -1089,6 +1089,11 @@ def _eval_GetArgs(tp, base, *, ctx) -> typing.Any:
     return tuple[*args]  # type: ignore[valid-type]
 
 
+# NOTE: GenericCallable does NOT have an evaluator.
+# It is handled via GetArg/GetArgs which extract the typevars and callable.
+# This is by design per PEP 827 which restricts GenericCallable to Member type arguments.
+
+
 @type_eval.register_evaluator(GetSpecialAttr)
 @_lift_over_unions
 def _eval_GetSpecialAttr(tp, attr, *, ctx) -> typing.Any:
