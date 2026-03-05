@@ -23,6 +23,7 @@ from typemap.typing import (
     Attrs,
     Bool,
     Capitalize,
+    DeepPartial,
     DropAnnotations,
     FromUnion,
     GenericCallable,
@@ -36,17 +37,23 @@ from typemap.typing import (
     IsAssignable,
     IsEquivalent,
     Iter,
+    KeyOf,
     Length,
     Lowercase,
     Member,
     Members,
     NewProtocol,
+    Omit,
     Overloaded,
     Param,
+    Partial,
+    Pick,
     RaiseError,
+    Required,
     Slice,
     SpecialFormEllipsis,
     StrConcat,
+    Template,
     Uncapitalize,
     UpdateClass,
     Uppercase,
@@ -1282,3 +1289,279 @@ def _eval_NewProtocol(*etyps: Member, ctx):
         cls.__init__ = dct["__init__"]
 
     return cls
+
+
+@type_eval.register_evaluator(KeyOf)
+@_lift_over_unions
+def _eval_KeyOf(tp, *, ctx):
+    """Evaluate KeyOf[T] to get all member names as a tuple of Literals."""
+    tp = _eval_types(tp, ctx)
+    hints = get_annotated_type_hints(
+        tp, include_extras=True, attrs_only=True, ctx=ctx
+    )
+
+    if not hints:
+        return typing.Literal[()]
+
+    # Extract member names and create tuple of Literal types
+    names = []
+    for name in hints:
+        names.append(typing.Literal[name])
+
+    # Return as tuple of Literal types (use unpacking to make it hashable)
+    return tuple[*names]  # type: ignore[return-value]
+
+
+@type_eval.register_evaluator(Template)
+def _eval_Template(*parts, ctx):
+    """Evaluate Template to concatenate all string parts."""
+    evaluated_parts = []
+    for part in parts:
+        evaled = _eval_types(part, ctx)
+        if _typing_inspect.is_generic_alias(evaled):
+            if evaled.__origin__ is typing.Literal:
+                # Extract literal string value
+                lit_val = evaled.__args__[0]
+                if isinstance(lit_val, str):
+                    evaluated_parts.append(lit_val)
+                else:
+                    raise TypeError(
+                        f"Template parts must be string literals, got {lit_val}"
+                    )
+            else:
+                raise TypeError(
+                    f"Template parts must be string literals, got {evaled}"
+                )
+        elif isinstance(evaled, str):
+            # Plain string (shouldn't happen but handle it)
+            evaluated_parts.append(evaled)
+        else:
+            raise TypeError(
+                f"Template parts must be string literals, got {type(evaled)}"
+            )
+
+    return typing.Literal["".join(evaluated_parts)]
+
+
+@type_eval.register_evaluator(DeepPartial)
+def _eval_DeepPartial(tp, *, ctx):
+    """Evaluate DeepPartial[T] to create a class with all fields optional."""
+    from typing import get_args
+
+    tp = _eval_types(tp, ctx)
+
+    # Get attributes using Attrs to get Member objects
+    attrs_result = _eval_Attrs(tp, ctx=ctx)
+    attrs_args = get_args(attrs_result)
+
+    if not attrs_args:
+        return tp
+
+    new_annotations = {}
+
+    for member in attrs_args:
+        # Get the member name
+        name_result = _eval_types(member.name, ctx)
+        name = (
+            get_args(name_result)[0]
+            if hasattr(name_result, "__args__")
+            else name_result
+        )
+
+        # Get the member type
+        type_result = _eval_types(member.type, ctx)
+
+        # Check if this is a complex type (class with its own attributes)
+        if isinstance(type_result, type):
+            try:
+                nested_attrs = _eval_Attrs(type_result, ctx=ctx)
+                nested_args = get_args(nested_attrs)
+                if nested_args:
+                    try:
+                        nested_partial = _eval_DeepPartial(type_result, ctx=ctx)
+                        new_annotations[name] = nested_partial | None
+                    except NameError, TypeError:
+                        new_annotations[name] = type_result | None
+                else:
+                    new_annotations[name] = type_result | None
+            except NameError, TypeError, AttributeError:
+                new_annotations[name] = type_result | None
+        else:
+            new_annotations[name] = type_result | None
+
+    class_name = (
+        f"DeepPartial_{tp.__name__ if hasattr(tp, '__name__') else 'Anonymous'}"
+    )
+    return type(class_name, (), {"__annotations__": new_annotations})
+
+
+@type_eval.register_evaluator(Partial)
+def _eval_Partial(tp, *, ctx):
+    """Evaluate Partial[T] to create a class with all fields optional (non-recursive)."""
+    from typing import get_args
+
+    tp = _eval_types(tp, ctx)
+
+    # Get attributes using Attrs
+    attrs_result = _eval_Attrs(tp, ctx=ctx)
+    attrs_args = get_args(attrs_result)
+
+    if not attrs_args:
+        return tp
+
+    new_annotations = {}
+
+    for member in attrs_args:
+        name_result = _eval_types(member.name, ctx)
+        name = (
+            get_args(name_result)[0]
+            if hasattr(name_result, "__args__")
+            else name_result
+        )
+
+        try:
+            type_result = _eval_types(member.type, ctx)
+            new_annotations[name] = type_result | None
+        except NameError, TypeError, AttributeError:
+            new_annotations[name] = typing.Any | None
+
+    class_name = (
+        f"Partial_{tp.__name__ if hasattr(tp, '__name__') else 'Anonymous'}"
+    )
+    return type(class_name, (), {"__annotations__": new_annotations})
+
+
+@type_eval.register_evaluator(Required)
+def _eval_Required(tp, *, ctx):
+    """Evaluate Required[T] to remove Optional from all fields."""
+    from typing import get_args
+
+    tp = _eval_types(tp, ctx)
+
+    attrs_result = _eval_Attrs(tp, ctx=ctx)
+    attrs_args = get_args(attrs_result)
+
+    if not attrs_args:
+        return tp
+
+    new_annotations = {}
+
+    for member in attrs_args:
+        name_result = _eval_types(member.name, ctx)
+        name = (
+            get_args(name_result)[0]
+            if hasattr(name_result, "__args__")
+            else name_result
+        )
+
+        type_result = _eval_types(member.type, ctx)
+
+        # Remove None from union types
+        if isinstance(type_result, types.UnionType):
+            non_none_args = [
+                arg for arg in type_result.__args__ if arg is not type(None)
+            ]
+            if len(non_none_args) == 1:
+                new_annotations[name] = non_none_args[0]
+            elif len(non_none_args) > 1:
+                new_annotations[name] = types.UnionType(*non_none_args)
+            else:
+                new_annotations[name] = type_result
+        elif (
+            hasattr(type_result, "__origin__")
+            and type_result.__origin__ is typing.Union
+        ):
+            non_none_args = [
+                arg for arg in get_args(type_result) if arg is not type(None)
+            ]
+            if len(non_none_args) == 1:
+                new_annotations[name] = non_none_args[0]
+            elif len(non_none_args) > 1:
+                new_annotations[name] = typing.Union[*non_none_args]
+            else:
+                new_annotations[name] = type_result
+        else:
+            new_annotations[name] = type_result
+
+    class_name = (
+        f"Required_{tp.__name__ if hasattr(tp, '__name__') else 'Anonymous'}"
+    )
+    return type(class_name, (), {"__annotations__": new_annotations})
+
+
+@type_eval.register_evaluator(Pick)
+def _eval_Pick(tp, keys, *, ctx):
+    """Evaluate Pick[T, K] to create a class with only specified fields."""
+    from typing import get_args
+
+    tp = _eval_types(tp, ctx)
+    keys = _eval_types(keys, ctx)
+
+    key_names = tuple(get_args(keys)) if hasattr(keys, "__args__") else ()
+
+    attrs_result = _eval_Attrs(tp, ctx=ctx)
+    attrs_args = get_args(attrs_result)
+
+    if not attrs_args:
+        return tp
+
+    new_annotations = {}
+
+    for member in attrs_args:
+        name_result = _eval_types(member.name, ctx)
+        name = (
+            get_args(name_result)[0]
+            if hasattr(name_result, "__args__")
+            else name_result
+        )
+
+        if name in key_names:
+            try:
+                type_result = _eval_types(member.type, ctx)
+                new_annotations[name] = type_result
+            except NameError, TypeError, AttributeError:
+                new_annotations[name] = typing.Any
+
+    class_name = (
+        f"Pick_{tp.__name__ if hasattr(tp, '__name__') else 'Anonymous'}"
+    )
+    return type(class_name, (), {"__annotations__": new_annotations})
+
+
+@type_eval.register_evaluator(Omit)
+def _eval_Omit(tp, keys, *, ctx):
+    """Evaluate Omit[T, K] to create a class excluding specified fields."""
+    from typing import get_args
+
+    tp = _eval_types(tp, ctx)
+    keys = _eval_types(keys, ctx)
+
+    key_names = set(get_args(keys)) if hasattr(keys, "__args__") else set()
+
+    attrs_result = _eval_Attrs(tp, ctx=ctx)
+    attrs_args = get_args(attrs_result)
+
+    if not attrs_args:
+        return tp
+
+    new_annotations = {}
+
+    for member in attrs_args:
+        name_result = _eval_types(member.name, ctx)
+        name = (
+            get_args(name_result)[0]
+            if hasattr(name_result, "__args__")
+            else name_result
+        )
+
+        if name not in key_names:
+            try:
+                type_result = _eval_types(member.type, ctx)
+                new_annotations[name] = type_result
+            except NameError, TypeError, AttributeError:
+                new_annotations[name] = typing.Any
+
+    class_name = (
+        f"Omit_{tp.__name__ if hasattr(tp, '__name__') else 'Anonymous'}"
+    )
+    return type(class_name, (), {"__annotations__": new_annotations})

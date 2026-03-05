@@ -309,6 +309,100 @@ class RaiseError[S: str, *Ts]:
     pass
 
 
+class KeyOf[T]:
+    """Return all member names as a tuple.
+
+    Usage:
+        type Keys = KeyOf[User]
+        # Returns tuple[Literal['name'], Literal['email'], Literal['age']]
+
+    This is similar to TypeScript's keyof operator.
+    """
+
+    pass
+
+
+class Template[*Parts]:
+    """Template literal string builder.
+
+    Usage:
+        type Route = Template['/', Resource, '/id']
+        # For Resource = 'users', returns: '/users/id'
+
+    This allows building string templates from parts that get concatenated.
+    """
+
+    pass
+
+
+class DeepPartial[T]:
+    """Make all fields recursively optional.
+
+    For each field in T:
+    - If it's a primitive type (int, str, etc.), make it optional
+    - If it's a complex type (class with attrs), recursively apply DeepPartial
+
+    Usage:
+        type DeepUser = DeepPartial[User]
+
+    Note: This creates a new class at runtime with all fields optional.
+    """
+
+    pass
+
+
+class Partial[T]:
+    """Make all fields optional (non-recursive).
+
+    For each field in T, make it optional (T | None).
+    Unlike DeepPartial, this does not recursively apply to nested types.
+
+    Usage:
+        type PartialUser = Partial[User]
+    """
+
+    pass
+
+
+class Required[T]:
+    """Make all fields required (remove Optional).
+
+    This is the inverse of Partial - it removes None from field types.
+    Note: This is primarily useful for TypedDict or similar types.
+
+    Usage:
+        type RequiredUser = Required[SomeOptionalType]
+    """
+
+    pass
+
+
+class Pick[T, K]:
+    """Pick specific fields from a type.
+
+    Creates a new type with only the specified fields from T.
+    K should be a tuple of field names to pick.
+
+    Usage:
+        type UserNameAndEmail = Pick[User, tuple['name', 'email']]
+    """
+
+    pass
+
+
+class Omit[T, K]:
+    """Omit specific fields from a type.
+
+    Creates a new type with all fields from T except those specified in K.
+    K should be a tuple of field names to omit.
+
+    Usage:
+        type UserWithoutPassword = Omit[User, tuple['password']]
+    """
+
+    pass
+
+
 ##################################################################
 
 # TODO: type better

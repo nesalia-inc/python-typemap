@@ -1,6 +1,6 @@
 [project]
 name = "typemap"
-version = "0.1.2"
+version = "0.2.0"
 description = "PEP 827 type manipulation library"
 requires-python = ">=3.14"
 dependencies = [
