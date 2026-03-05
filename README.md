@@ -23,6 +23,13 @@ This repository contains the **typemap** package, which provides utilities for w
   - `UpdateClass` - Generate class modifications
   - `NewProtocol` - Create protocols dynamically
   - `IsAssignable` - Check type assignability
+  - `KeyOf` - Get all member names as tuple of Literals
+  - `Template` - Build template literal strings
+  - `DeepPartial` - Make all fields recursively optional
+  - `Partial` - Make all fields optional (non-recursive)
+  - `Required` - Remove Optional from all fields
+  - `Pick` - Pick specific fields from a type
+  - `Omit` - Omit specific fields from a type
 
 ## Documentation
 
