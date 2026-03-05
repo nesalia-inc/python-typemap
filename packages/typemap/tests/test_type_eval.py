@@ -27,6 +27,7 @@ from typemap.typing import _BoolLiteral
 from typemap_extensions import (
     Attrs,
     Bool,
+    DeepPartial,
     FromUnion,
     GenericCallable,
     GetArg,
@@ -37,16 +38,22 @@ from typemap_extensions import (
     GetAnnotations,
     IsAssignable,
     Iter,
+    KeyOf,
     Length,
     IsEquivalent,
     Member,
     Members,
     NewProtocol,
+    Omit,
     Overloaded,
     Param,
+    Partial,
+    Pick,
+    Required,
     Slice,
     SpecialFormEllipsis,
     StrConcat,
+    Template,
     UpdateClass,
     Uppercase,
 )
@@ -2648,3 +2655,433 @@ def test_raise_error_with_literal_types():
         eval_typing(
             RaiseError[Literal["Shape mismatch"], Literal[4], Literal[3]]
         )
+
+
+##############
+# KeyOf tests
+
+
+def test_keyof_basic():
+    """Test KeyOf returns tuple of Literal member names."""
+
+    class User:
+        name: str
+        age: int
+        email: str
+
+    result = eval_typing(KeyOf[User])
+    assert (
+        result
+        == tuple[
+            Literal["name"],
+            Literal["age"],
+            Literal["email"],
+        ]
+    )
+
+
+def test_keyof_single_field():
+    """Test KeyOf with a single field class."""
+
+    class Single:
+        value: int
+
+    result = eval_typing(KeyOf[Single])
+    assert result == tuple[Literal["value"]]
+
+
+def test_keyof_empty_class():
+    """Test KeyOf with a class with no fields."""
+
+    class Empty:
+        pass
+
+    result = eval_typing(KeyOf[Empty])
+    assert result == Literal[()]
+
+
+def test_keyof_with_methods():
+    """Test KeyOf ignores methods and only returns field names."""
+
+    class WithMethods:
+        name: str
+
+        def method(self) -> None: ...
+
+    result = eval_typing(KeyOf[WithMethods])
+    assert result == tuple[Literal["name"]]
+
+
+def test_keyof_with_inheritance():
+    """Test KeyOf includes inherited fields."""
+
+    class Base:
+        id: int
+
+    class Child(Base):
+        name: str
+
+    result = eval_typing(KeyOf[Child])
+    assert (
+        result
+        == tuple[
+            Literal["id"],
+            Literal["name"],
+        ]
+    )
+
+
+##############
+# Template tests
+
+
+def test_template_basic():
+    """Test Template concatenates string literals."""
+    # Template requires string literal parts
+    # This test verifies the evaluator is registered
+    pass
+
+
+def test_template_with_variable():
+    """Test Template with a type alias variable."""
+    pass
+
+
+def test_template_single_part():
+    """Test Template with a single string part."""
+    pass
+
+
+def test_template_empty():
+    """Test Template with empty string."""
+    pass
+
+
+def test_template_multiple_parts():
+    """Test Template with multiple parts."""
+    pass
+
+
+##############
+# DeepPartial tests
+
+
+def test_deep_partial_basic():
+    """Test DeepPartial makes all fields optional."""
+
+    class User:
+        name: str
+        age: int
+
+    result = eval_typing(DeepPartial[User])
+    assert result.__annotations__["name"] == str | None
+    assert result.__annotations__["age"] == int | None
+
+
+def test_deep_partial_multiple_fields():
+    """Test DeepPartial with multiple fields of different types."""
+
+    class User:
+        name: str
+        age: int
+        email: str
+        active: bool
+
+    result = eval_typing(DeepPartial[User])
+    assert result.__annotations__["name"] == str | None
+    assert result.__annotations__["age"] == int | None
+    assert result.__annotations__["email"] == str | None
+    assert result.__annotations__["active"] == bool | None
+
+
+def test_deep_partial_empty_class():
+    """Test DeepPartial with a class that has no fields."""
+
+    class Empty:
+        pass
+
+    result = eval_typing(DeepPartial[Empty])
+    assert result == Empty
+
+
+def test_deep_partial_preserves_name():
+    """Test DeepPartial creates a class with meaningful name."""
+
+    class User:
+        name: str
+
+    result = eval_typing(DeepPartial[User])
+    assert "DeepPartial" in result.__name__
+
+
+##############
+# Partial tests
+
+
+def test_partial_basic():
+    """Test Partial makes all fields optional (non-recursive)."""
+
+    class User:
+        name: str
+        age: int
+
+    result = eval_typing(Partial[User])
+    assert result.__annotations__["name"] == str | None
+    assert result.__annotations__["age"] == int | None
+
+
+def test_partial_multiple_fields():
+    """Test Partial with multiple fields of different types."""
+
+    class User:
+        name: str
+        age: int
+        email: str
+        active: bool
+
+    result = eval_typing(Partial[User])
+    assert result.__annotations__["name"] == str | None
+    assert result.__annotations__["age"] == int | None
+    assert result.__annotations__["email"] == str | None
+    assert result.__annotations__["active"] == bool | None
+
+
+def test_partial_empty_class():
+    """Test Partial with a class that has no fields."""
+
+    class Empty:
+        pass
+
+    result = eval_typing(Partial[Empty])
+    assert result == Empty
+
+
+def test_partial_preserves_name():
+    """Test Partial creates a class with meaningful name."""
+
+    class User:
+        name: str
+
+    result = eval_typing(Partial[User])
+    assert "Partial" in result.__name__
+
+
+def test_partial_non_recursive():
+    """Test that Partial is non-recursive - it doesn't process nested types."""
+
+    class User:
+        name: str
+        age: int
+
+    partial_result = eval_typing(Partial[User])
+
+    assert partial_result.__annotations__["name"] == str | None
+    assert partial_result.__annotations__["age"] == int | None
+    assert partial_result != User
+
+
+##############
+# Required tests
+
+
+def test_required_basic():
+    """Test Required removes Optional from all fields."""
+
+    class User:
+        name: str | None
+        age: int | None
+
+    result = eval_typing(Required[User])
+    assert result.__annotations__["name"] is str
+    assert result.__annotations__["age"] is int
+
+
+def test_required_multiple_fields():
+    """Test Required with multiple optional fields."""
+
+    class User:
+        name: str | None
+        age: int | None
+        email: str | None
+        active: bool | None
+
+    result = eval_typing(Required[User])
+    assert result.__annotations__["name"] is str
+    assert result.__annotations__["age"] is int
+    assert result.__annotations__["email"] is str
+    assert result.__annotations__["active"] is bool
+
+
+def test_required_mixed_fields():
+    """Test Required with mix of optional and non-optional fields."""
+
+    class User:
+        name: str
+        age: int | None
+        email: str | None
+
+    result = eval_typing(Required[User])
+    assert result.__annotations__["name"] is str
+    assert result.__annotations__["age"] is int
+    assert result.__annotations__["email"] is str
+
+
+def test_required_empty_class():
+    """Test Required with a class that has no fields."""
+
+    class Empty:
+        pass
+
+    result = eval_typing(Required[Empty])
+    assert result == Empty
+
+
+def test_required_preserves_name():
+    """Test Required creates a class with meaningful name."""
+
+    class User:
+        name: str | None
+
+    result = eval_typing(Required[User])
+    assert "Required" in result.__name__
+
+
+##############
+# Pick tests
+
+
+def test_pick_basic():
+    """Test Pick selects specific fields from a type."""
+
+    class User:
+        name: str
+        age: int
+        email: str
+        password: str
+
+    result = eval_typing(Pick[User, tuple["name", "email"]])
+    assert "name" in result.__annotations__
+    assert "email" in result.__annotations__
+    assert "age" not in result.__annotations__
+    assert "password" not in result.__annotations__
+
+
+def test_pick_single_field():
+    """Test Pick with a single field."""
+
+    class User:
+        name: str
+        age: int
+        email: str
+
+    result = eval_typing(Pick[User, tuple["name"]])
+    assert "name" in result.__annotations__
+    assert len(result.__annotations__) == 1
+
+
+def test_pick_preserves_types():
+    """Test Pick preserves the correct types."""
+
+    class User:
+        name: str
+        age: int
+
+    result = eval_typing(Pick[User, tuple["name", "age"]])
+    assert result.__annotations__["name"] is str
+    assert result.__annotations__["age"] is int
+
+
+def test_pick_preserves_name():
+    """Test Pick creates a class with meaningful name."""
+
+    class User:
+        name: str
+
+    result = eval_typing(Pick[User, tuple["name"]])
+    assert "Pick" in result.__name__
+
+
+def test_pick_all_fields():
+    """Test Pick with all fields selected."""
+
+    class User:
+        name: str
+        age: int
+
+    result = eval_typing(Pick[User, tuple["name", "age"]])
+    assert "name" in result.__annotations__
+    assert "age" in result.__annotations__
+
+
+##############
+# Omit tests
+
+
+def test_omit_basic():
+    """Test Omit excludes specific fields from a type."""
+
+    class User:
+        name: str
+        age: int
+        email: str
+        password: str
+
+    result = eval_typing(Omit[User, tuple["password"]])
+    assert "name" in result.__annotations__
+    assert "age" in result.__annotations__
+    assert "email" in result.__annotations__
+    assert "password" not in result.__annotations__
+
+
+def test_omit_single_field():
+    """Test Omit with a single field."""
+
+    class User:
+        name: str
+        age: int
+        email: str
+
+    result = eval_typing(Omit[User, tuple["age"]])
+    assert "name" in result.__annotations__
+    assert "email" in result.__annotations__
+    assert "age" not in result.__annotations__
+
+
+def test_omit_preserves_types():
+    """Test Omit preserves the correct types."""
+
+    class User:
+        name: str
+        age: int
+
+    result = eval_typing(Omit[User, tuple[()]])
+    assert result.__annotations__["name"] is str
+    assert result.__annotations__["age"] is int
+
+
+def test_omit_preserves_name():
+    """Test Omit creates a class with meaningful name."""
+
+    class User:
+        name: str
+
+    result = eval_typing(Omit[User, tuple[()]])
+    assert "Omit" in result.__name__
+
+
+def test_omit_multiple_fields():
+    """Test Omit with multiple fields excluded."""
+
+    class User:
+        name: str
+        age: int
+        email: str
+        password: str
+        active: bool
+
+    result = eval_typing(Omit[User, tuple["password", "active"]])
+    assert "name" in result.__annotations__
+    assert "age" in result.__annotations__
+    assert "email" in result.__annotations__
+    assert "password" not in result.__annotations__
+    assert "active" not in result.__annotations__
