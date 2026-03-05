@@ -3326,7 +3326,11 @@ def test_newtypeddict_multiple_qualifiers():
     result = eval_typing(
         NewTypedDict[
             Member[Literal["id"], int, Literal["ReadOnly"]],
-            Member[Literal["optional_name"], str, Literal["NotRequired", "ReadOnly"]],
+            Member[
+                Literal["optional_name"],
+                str,
+                Literal["NotRequired", "ReadOnly"],
+            ],
         ]
     )
     # Both should have metadata
