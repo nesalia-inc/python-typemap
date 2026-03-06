@@ -2848,6 +2848,76 @@ def test_generic_callable_getargs():
     assert args is not typing.Never
 
 
+###############
+# Overloaded tests
+
+
+def test_overloaded_basic():
+    """Test Overloaded with multiple callable types."""
+
+    ot = Overloaded[Callable[[int], str], Callable[[float], int]]
+    result = eval_typing(ot)
+    # Overloaded returns itself when evaluated
+    assert result is not typing.Never
+    assert result.__origin__ is Overloaded
+    assert len(result.__args__) == 2
+
+
+def test_overloaded_single_callable():
+    """Test Overloaded with a single callable type."""
+
+    ot = Overloaded[Callable[[int], str]]
+    result = eval_typing(ot)
+    assert result.__origin__ is Overloaded
+    assert len(result.__args__) == 1
+
+
+def test_overloaded_getarg_first():
+    """Test GetArg on Overloaded returns first callable."""
+
+    ot = Overloaded[Callable[[int], str], Callable[[float], int]]
+    arg0 = eval_typing(GetArg[ot, Overloaded, Literal[0]])
+    assert arg0 == Callable[[int], str]
+
+
+def test_overloaded_getarg_second():
+    """Test GetArg on Overloaded returns second callable."""
+
+    ot = Overloaded[Callable[[int], str], Callable[[float], int]]
+    arg1 = eval_typing(GetArg[ot, Overloaded, Literal[1]])
+    assert arg1 == Callable[[float], int]
+
+
+def test_overloaded_getargs():
+    """Test GetArgs on Overloaded returns all callables."""
+
+    ot = Overloaded[Callable[[int], str], Callable[[float], int]]
+    args = eval_typing(GetArgs[ot, Overloaded])
+    # GetArgs returns a tuple type
+    assert hasattr(args, "__args__")
+
+
+def test_overloaded_with_params():
+    """Test Overloaded with Param types."""
+
+    ot = Overloaded[
+        Callable[[Param[Literal["x"], int], Param[Literal["y"], int]], int],
+        Callable[[Param[Literal["s"], str]], str],
+    ]
+    result = eval_typing(ot)
+    assert result.__origin__ is Overloaded
+    assert len(result.__args__) == 2
+
+
+def test_overloaded_issubtype():
+    """Test Overloaded works with IsAssignable."""
+
+    ot = Overloaded[Callable[[int], str], Callable[[float], int]]
+    # First callable is assignable to Callable
+    first = eval_typing(GetArg[ot, Overloaded, Literal[0]])
+    assert eval_typing(IsAssignable[first, Callable])
+
+
 ##############
 # DeepPartial tests
 
