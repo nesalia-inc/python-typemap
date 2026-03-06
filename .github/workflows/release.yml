@@ -20,7 +20,7 @@ jobs:
 
       - name: Build
         working-directory: packages/typemap
-        run: uv build --no-sources
+        run: uv build
 
       - name: Publish to PyPI
         working-directory: packages/typemap
