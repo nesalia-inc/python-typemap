@@ -405,7 +405,11 @@ def _eval_nested_generic_alias(
 ):
     base, alias = obj.__args__
 
-    # TODO: what if it has parameters of its own
+    # Note: "what if it has parameters of its own" - This is a known limitation.
+    # When a class inherits from a parameterized generic (e.g., class Derived(Base[int])),
+    # the type parameters from the base class are not fully resolved when accessing
+    # associated types like Member.type. This would require more complex type context
+    # handling to properly resolve inherited type parameters.
 
     named_args = dict(
         zip(
