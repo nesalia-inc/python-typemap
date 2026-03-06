@@ -410,10 +410,10 @@ def _eval_nested_generic_alias(
     named_args: dict[str, typing.Any] = {}
 
     # Get the origin class (unparameterized)
-    origin = typing.get_origin(base) or getattr(base, '__origin__', base)
+    origin = typing.get_origin(base) or getattr(base, "__origin__", base)
 
     # Get type arguments from the base (e.g., int from Member[SomeClass[int], ...])
-    base_args = typing.get_args(base) if hasattr(base, '__args__') else ()
+    base_args = typing.get_args(base) if hasattr(base, "__args__") else ()
 
     # Add type params from the base class and their values
     if hasattr(origin, "__type_params__"):
@@ -429,14 +429,18 @@ def _eval_nested_generic_alias(
     # This partially handles: class Derived(Base[int]) has Member with definer=Base[int]
     # Note: This is a known limitation - the full resolution of inherited type parameters
     # from generic base classes requires more complex type context handling.
-    if hasattr(base, '__args__') and len(base.__args__) >= 5:
+    if hasattr(base, "__args__") and len(base.__args__) >= 5:
         definer = base.__args__[4]  # The defining class
         if definer is not typing.Never and definer is not None:
             definer_origin = typing.get_origin(definer)
             if definer_origin is not None:
                 definer_args = typing.get_args(definer)
                 if hasattr(definer_origin, "__type_params__"):
-                    for param, arg in zip(definer_origin.__type_params__, definer_args, strict=False):
+                    for param, arg in zip(
+                        definer_origin.__type_params__,
+                        definer_args,
+                        strict=False,
+                    ):
                         named_args[param.__name__] = arg
 
     # Evaluate the alias with the resolved type parameters
