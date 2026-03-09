@@ -100,7 +100,7 @@ def test_propsonly_all_relations():
     result = eval_typing(typing.PropsOnly[AllRelations])
 
     # Should have no properties
-    fmt = format_helper.format_class(result)
+    # (result is returned as-is since there are no Property fields)
 
 
 def test_propsonly_empty_class():
