@@ -17,30 +17,7 @@ export default function HomePage() {
     <section>
       <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[calc(100vh-4rem)]">
         {/* Left column - content */}
-        <div className="flex flex-col justify-between p-6 lg:p-12">
-          {/* Top section - logo and nav */}
-          <div className="flex w-full items-center justify-between">
-            <Link href="/" className="flex items-center gap-2">
-              <span className="text-xl font-bold">typemap</span>
-            </Link>
-
-            <div className="flex items-center gap-4">
-              <Link
-                href="/docs"
-                className="text-sm font-medium hover:underline"
-              >
-                Documentation
-              </Link>
-              <Link
-                href="https://github.com/nesalia-inc/python-typemap"
-                className="text-sm font-medium hover:underline"
-                target="_blank"
-              >
-                GitHub
-              </Link>
-            </div>
-          </div>
-
+        <div className="flex flex-col justify-center p-6 lg:p-12">
           {/* Middle section - hero */}
           <div className="flex flex-col gap-6">
             <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
@@ -69,11 +46,8 @@ export default function HomePage() {
                 View on GitHub
               </Link>
             </div>
-          </div>
 
-          {/* Bottom section - install */}
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 pt-4">
               <p className="text-sm text-muted-foreground">Install via pip</p>
               <button
                 onClick={copyToClipboard}
@@ -87,16 +61,11 @@ export default function HomePage() {
                 )}
               </button>
             </div>
-
-            <p className="text-sm text-muted-foreground max-w-md">
-              A runtime type evaluation library implementing PEP 827 type manipulation operators.
-              Build ORMs, form generators, and type-safe serialization with ease.
-            </p>
           </div>
         </div>
 
         {/* Right column - visual */}
-        <div className="hidden lg:flex items-center justify-center bg-gradient-to-br from-background to-accent/20 border-l border-border">
+        <div className="hidden lg:flex items-center justify-center bg-gradient-to-br from-background via-accent/10 to-background border-l border-border">
           <div className="flex flex-col gap-4 p-8">
             <pre className="text-sm bg-muted p-4 rounded-lg overflow-x-auto">
 {`from typemap import eval_typing
