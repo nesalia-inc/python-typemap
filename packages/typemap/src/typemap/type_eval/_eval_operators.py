@@ -24,6 +24,7 @@ from typemap.typing import (
     Attrs,
     Bool,
     Capitalize,
+    ConvertField,
     DeepPartial,
     DropAnnotations,
     FromUnion,
@@ -1537,6 +1538,70 @@ def _eval_PropsOnly(tp, *, ctx):
         f"PropsOnly_{tp.__name__ if hasattr(tp, '__name__') else 'Anonymous'}"
     )
     return type(class_name, (), {"__annotations__": new_annotations})
+
+
+@type_eval.register_evaluator(ConvertField)
+def _eval_ConvertField(tp, key, *, ctx):
+    """Evaluate ConvertField[T, K] to extract underlying type from field.
+
+    Converts ORM field descriptors to their underlying Python types:
+    - Property[T] -> T
+    - Link[T] -> T (wrapped in PropsOnly for relations)
+    - MultiLink[T] -> list[T] (wrapped in PropsOnly)
+    """
+    from typing import get_args, Literal
+
+    tp = _eval_types(tp, ctx)
+    key = _eval_types(key, ctx)
+
+    # Get the key name (should be a Literal)
+    key_name = (
+        get_args(key)[0]
+        if hasattr(key, "__args__")
+        else key
+    )
+
+    # Get the field type using GetMemberType
+    field_type = _eval_types(GetMemberType[tp, Literal[key_name]], ctx)
+
+    # Get the origin (e.g., Property from Property[int])
+    origin = typing.get_origin(field_type)
+
+    if origin is None:
+        # Not a generic type, return as-is
+        return field_type
+
+    # Get the type argument (e.g., int from Property[int])
+    type_arg = get_args(field_type)
+    if not type_arg:
+        return field_type
+
+    underlying_type = type_arg[0]
+
+    # Check if it's a Link/MultiLink (relation)
+    origin_name = getattr(origin, '__name__', '')
+    is_link = False
+    is_multilink = False
+
+    if hasattr(origin, '__mro__'):
+        if Link in origin.__mro__:
+            is_link = True
+            if MultiLink in origin.__mro__:
+                is_multilink = True
+
+    if is_link:
+        # It's a relation - apply PropsOnly to get only scalar fields
+        props_only_type = _eval_PropsOnly(underlying_type, ctx=ctx)
+
+        # If MultiLink, wrap in list
+        if is_multilink:
+            return list[props_only_type]
+
+        # Otherwise return the props only type
+        return props_only_type
+
+    # Regular Property - return the underlying type
+    return underlying_type
 
 
 @type_eval.register_evaluator(Required)
