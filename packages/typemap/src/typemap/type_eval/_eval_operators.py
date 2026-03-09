@@ -1639,15 +1639,15 @@ def _eval_AdjustLink(tgt, link_ty, *, ctx):
     # Check the origin's name to determine if it's a MultiLink
     # MultiLink types typically have "Multi" or "List" or are subclasses
     # that are not the base Link
-    origin_name = getattr(origin, '__name__', '')
+    origin_name = getattr(origin, "__name__", "")
 
     # Heuristic: if origin name contains "Multi" or ends with "s" (common for lists)
     # or is explicitly a multi-link pattern
-    if 'Multi' in origin_name or origin_name.endswith('s'):
+    if "Multi" in origin_name or origin_name.endswith("s"):
         return list[tgt]
 
     # Check MRO for Link/MultiLink pattern
-    if hasattr(origin, '__mro__'):
+    if hasattr(origin, "__mro__"):
         mro = origin.__mro__
         # Check if it's a Link but has something beyond Link in MRO
         # (indicating it's a specialized variant like MultiLink)
@@ -1663,14 +1663,17 @@ def _eval_AdjustLink(tgt, link_ty, *, ctx):
 # Users would typically subclass these in their own code
 class Pointer[T]:
     """Base class for pointer types (Property, Link, MultiLink)."""
+
     pass
 
 
 class Link(Pointer):
     """Base class for linked types (one-to-one or one-to-many)."""
+
     pass
 
 
 class MultiLink(Link):
     """Base class for multi-link types (one-to-many relationships)."""
+
     pass
