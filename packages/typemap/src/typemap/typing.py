@@ -418,6 +418,40 @@ class Omit[T, K]:
     pass
 
 
+class PropsOnly[T]:
+    """Extract only Property fields, excluding Link/MultiLink relations.
+
+    Creates a new class containing only Property fields,
+    excluding relation fields (Link, MultiLink).
+
+    Usage:
+        type UserProps = PropsOnly[User]
+        # Results in: {id: int, name: str, email: str}
+        # (posts and profile relations are excluded)
+    """
+
+    pass
+
+
+class ConvertField[T, K]:
+    """Convert field type to underlying Python type.
+
+    Extracts the underlying type from ORM field descriptors:
+    - Property[int] -> int
+    - Link[User] -> User
+    - MultiLink[Post] -> list[Post] (via AdjustLink)
+
+    Usage:
+        type UserId = ConvertField[User, Literal['id']]
+        # If id: Property[int], returns: int
+
+        type UserPosts = ConvertField[User, Literal['posts']]
+        # If posts: MultiLink[Post], returns: list[Post]
+    """
+
+    pass
+
+
 ##################################################################
 
 # TODO: type better
