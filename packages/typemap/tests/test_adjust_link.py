@@ -13,21 +13,25 @@ from . import format_helper
 # Define ORM-like types
 class Pointer[T]:
     """Base pointer type."""
+
     pass
 
 
 class Property[T](Pointer[T]):
     """Property type for scalar fields."""
+
     pass
 
 
 class Link[T](Pointer[T]):
     """Link type for one-to-one relationships."""
+
     pass
 
 
 class MultiLink[T](Link[T]):
     """MultiLink type for one-to-many relationships."""
+
     pass
 
 
