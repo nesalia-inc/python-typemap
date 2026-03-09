@@ -1579,7 +1579,6 @@ def _eval_ConvertField(tp, key, *, ctx):
     underlying_type = type_arg[0]
 
     # Check if it's a Link/MultiLink (relation)
-    origin_name = getattr(origin, '__name__', '')
     is_link = False
     is_multilink = False
 
