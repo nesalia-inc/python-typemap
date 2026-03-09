@@ -1,0 +1,64 @@
+---
+title: Member
+description: Access type members by name
+---
+
+Describe a class member with its name, type, and qualifiers.
+
+## Quick Example
+
+```python
+import typemap_extensions as tm
+from typing import Literal
+
+# Describe a member
+member = tm.Member[Literal["name"], str]
+```
+
+## Signature
+
+```python
+class Member[N: str, T, Q: MemberQuals = Never, I = Never, D = Never]:
+    type name = N
+    type type = T
+    type quals = Q
+    type init = I
+    type definer = D
+```
+
+## Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `N` | `str` (Literal) | Member name |
+| `T` | `type` | Member type |
+| `Q` | `MemberQuals` | Qualifiers (ClassVar, Final, NotRequired, ReadOnly) |
+| `I` | `type` | Init type (for `__init__` params) |
+| `D` | `type` | Definer type |
+
+## Usage
+
+### Basic Member
+
+```python
+name_member = tm.Member[Literal["name"], str]
+# Describes: name: str
+```
+
+### With Qualifiers
+
+```python
+readonly_member = tm.Member[Literal["id"], int, Literal["ReadOnly"]]
+# Describes: id: ReadOnly[int]
+```
+
+## Use Cases
+
+- **Building protocols** - Combine Members to create new types
+- **Introspection** - Extract metadata about class fields
+- **Code generation** - Generate constructors, validators
+
+## See Also
+
+- [NewProtocol](/docs/newprotocol) - Create protocols from Members
+- [Attrs](/docs/attrs) - Get all attribute Members

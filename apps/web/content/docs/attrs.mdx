@@ -1,0 +1,89 @@
+---
+title: Attrs
+description: Get all attribute members of a class
+---
+
+Get all attributes (not methods) from a class as a tuple of `Member` types.
+
+## Quick Example
+
+```python
+import typemap_extensions as tm
+
+class User:
+    name: str
+    age: int
+    email: str
+    def greet(self):  # This is a method, not an attribute
+        pass
+
+attrs = tm.Attrs[User]
+# Returns tuple of Member types for name, age, email
+```
+
+## Signature
+
+```python
+class Attrs[T](_TupleLikeOperator):
+    """Get all attribute members of a class."""
+```
+
+## What It Returns
+
+Returns a **tuple** of `Member` types, one for each attribute:
+
+```python
+from typemap import eval_typing
+
+attrs = eval_typing(tm.Attrs[User])
+# Returns: tuple[Member[Literal["name"], str], Member[Literal["age"], int], ...]
+```
+
+## Usage
+
+### Get All Attributes
+
+```python
+class Product:
+    id: int
+    name: str
+    price: float
+    in_stock: bool
+
+attrs = tm.Attrs[Product]
+```
+
+### Iterate Over Attributes
+
+```python
+import typemap_extensions as tm
+
+# In a type alias, you can iterate
+type AllNames = tuple[
+    m.name for m in tm.Iter[tm.Attrs[User]]
+]
+```
+
+## Attributes vs Methods
+
+`Attrs` only returns **data attributes**, not methods:
+
+```python
+class MyClass:
+    value: int          # Attribute ✓
+    name: str = "test" # Attribute with default ✓
+
+    def process(self):  # Method ✗
+        pass
+```
+
+## Use Cases
+
+- **Generate forms** - Get all fields to build input forms
+- **Serialization** - Get all fields to serialize to JSON
+- **Validation** - Validate all fields of a model
+
+## See Also
+
+- [Members](/docs/members) - Get all members including methods
+- [Iter](/docs/iter) - Iterate over type contents

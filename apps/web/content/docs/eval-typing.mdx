@@ -1,0 +1,93 @@
+---
+title: eval_typing
+description: Evaluate type expressions at runtime
+---
+
+The main function to evaluate types at runtime.
+
+## Quick Example
+
+```python
+from typemap import eval_typing
+import typemap_extensions as tm
+
+class User:
+    name: str
+    age: int
+
+result = eval_typing(tm.KeyOf[User])
+# Returns: tuple[Literal["name"], Literal["age"]]
+```
+
+## Signature
+
+```python
+def eval_typing(type_expr: Any) -> Any:
+    """Evaluate a type expression and return the resolved type."""
+```
+
+## What It Does
+
+`eval_typing` takes a type expression and:
+1. **Resolves** any type aliases
+2. **Applies** type operators (like `KeyOf`, `Partial`)
+3. **Evaluates** special forms (like `IsAssignable`)
+4. **Returns** the concrete type
+
+## Usage
+
+### Basic Type
+
+```python
+class MyClass:
+    x: int
+    y: str
+
+result = eval_typing(MyClass)
+# Returns the class itself
+```
+
+### With Type Operators
+
+```python
+# Get all field names
+keys = eval_typing(tm.KeyOf[User])
+
+# Make fields optional
+partial = eval_typing(tm.Partial[User])
+
+# Pick specific fields
+picked = eval_typing(tm.Pick[User, tuple["name"]])
+```
+
+### With Special Forms
+
+```python
+# Check type compatibility
+is_compatible = eval_typing(tm.IsAssignable[int, float])
+# Returns: True
+```
+
+## Error Handling
+
+```python
+from typemap.type_eval import TypeMapError, StuckException
+
+try:
+    result = eval_typing(some_type)
+except TypeMapError as e:
+    print(f"Type error: {e}")
+except StuckException as e:
+    print(f"Can't evaluate: {e}")
+```
+
+## When to Use
+
+Use `eval_typing` when you need to:
+- Get information about a type at runtime
+- Transform types dynamically
+- Build things based on type metadata
+
+<Callout>
+  **Tip**: For most use cases, you'll use `eval_typing` combined with type operators from `typemap_extensions`.
+</Callout>

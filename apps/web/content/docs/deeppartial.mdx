@@ -1,0 +1,85 @@
+---
+title: DeepPartial
+description: Make all fields recursively optional
+---
+
+Make all fields optional, including nested types.
+
+## Quick Example
+
+```python
+import typemap_extensions as tm
+from typemap import eval_typing
+
+class Address:
+    street: str
+    city: str
+
+class User:
+    name: str
+    address: Address
+
+DeepUser = eval_typing(tm.DeepPartial[User])
+# Results in: name: str | None, address: Address | None
+#             AND inside Address: street: str | None, city: str | None
+```
+
+## Signature
+
+```python
+class DeepPartial[T]:
+    """Make all fields recursively optional."""
+```
+
+## What It Does
+
+`DeepPartial` makes **every field** optional, including nested types. It recurses into all nested classes.
+
+## Partial vs DeepPartial
+
+```python
+class Address:
+    street: str
+    city: str
+
+class User:
+    name: str
+    address: Address
+
+# Partial - only top level
+PartialUser = eval_typing(tm.Partial[User])
+# name: str | None
+# address: Address  <-- NOT optional
+
+# DeepPartial - all levels
+DeepUser = eval_typing(tm.DeepPartial[User])
+# name: str | None
+# address: Address | None  <-- Also optional!
+#   street: str | None
+#   city: str | None
+```
+
+## Use Cases
+
+- **Deep updates** - Update deeply nested structures
+- **Recursive validation** - Validate any subset of a structure
+- **Merge operations** - Merge objects with partial overrides
+
+## TypeScript Comparison
+
+```typescript
+// TypeScript
+type DeepUser = DeepPartial<User>;
+
+// typemap
+DeepUser = eval_typing(tm.DeepPartial[User])
+```
+
+<Callout>
+  **Warning**: DeepPartial can be slow on deeply nested structures as it must traverse all levels.
+</Callout>
+
+## See Also
+
+- [Partial](/docs/partial) - Only top-level fields
+- [Required](/docs/required) - The opposite of DeepPartial

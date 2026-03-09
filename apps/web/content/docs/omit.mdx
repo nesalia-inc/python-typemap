@@ -1,0 +1,87 @@
+---
+title: Omit
+description: Exclude specific fields from a type
+---
+
+Remove specific fields from a type.
+
+## Quick Example
+
+```python
+import typemap_extensions as tm
+from typemap import eval_typing
+
+class User:
+    id: int
+    name: str
+    email: str
+    password_hash: str
+    created_at: datetime
+
+# Remove sensitive fields
+PublicUser = eval_typing(tm.Omit[User, tuple["password_hash", "created_at"]])
+# Results in: class with id: int, name: str, email: str
+```
+
+## Signature
+
+```python
+class Omit[T, K]:
+    """Omit specific fields from a type."""
+```
+
+## Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `T` | `type` | Source type |
+| `K` | `tuple` | Fields to exclude (as Literals) |
+
+## Usage
+
+### Exclude Password
+
+```python
+class User:
+    username: str
+    email: str
+    password_hash: str
+
+# For API responses - never include password!
+SafeUser = eval_typing(tm.Omit[User, tuple["password_hash"]])
+```
+
+### Multiple Fields
+
+```python
+class Post:
+    id: int
+    title: str
+    content: str
+    author_id: int
+    created_at: datetime
+    updated_at: datetime
+
+# Exclude metadata fields
+PostPreview = eval_typing(tm.Omit[Post, tuple["created_at", "updated_at"]])
+```
+
+## Use Cases
+
+- **Security** - Remove sensitive fields from responses
+- **API design** - Create different views of the same data
+- **Cleanups** - Remove internal fields
+
+## TypeScript Comparison
+
+```typescript
+// TypeScript
+type SafeUser = Omit<User, "password_hash">;
+
+// typemap
+SafeUser = eval_typing(tm.Omit[User, tuple["password_hash"]])
+```
+
+## See Also
+
+- [Pick](/docs/pick) - Keep specific fields instead

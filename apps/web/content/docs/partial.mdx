@@ -1,0 +1,84 @@
+---
+title: Partial
+description: Make all fields optional (non-recursive)
+---
+
+Make all fields of a type optional.
+
+## Quick Example
+
+```python
+import typemap_extensions as tm
+from typemap import eval_typing
+
+class User:
+    name: str
+    age: int
+    email: str
+
+PartialUser = eval_typing(tm.Partial[User])
+# Results in: class with name: str | None, age: int | None, email: str | None
+```
+
+## Signature
+
+```python
+class Partial[T]:
+    """Make all fields optional (non-recursive)."""
+```
+
+## What It Does
+
+`Partial` makes every field optional by adding `| None` to each field's type. It does **not** recurse into nested types.
+
+## Usage
+
+### Basic Partial
+
+```python
+class Config:
+    host: str
+    port: int
+    debug: bool
+
+# All fields can now be None
+PartialConfig = eval_typing(tm.Partial[Config])
+# Results in: host: str | None, port: int | None, debug: bool | None
+```
+
+### Nested Types Are NOT Modified
+
+```python
+class Address:
+    street: str
+    city: str
+
+class User:
+    name: str
+    address: Address
+
+PartialUser = eval_typing(tm.Partial[User])
+# name: str | None
+# address: Address  <-- NOT Address | None!
+```
+
+## Use Cases
+
+- **Form defaults** - Optional form fields
+- **Update operations** - PATCH requests where fields are optional
+- **Partial validation** - Validate a subset of fields
+
+## TypeScript Comparison
+
+```typescript
+// TypeScript
+type PartialUser = Partial<User>;
+
+// typemap
+PartialUser = eval_typing(tm.Partial[User])
+```
+
+## See Also
+
+- [DeepPartial](/docs/deeppartial) - Make nested fields optional too
+- [Required](/docs/required) - The opposite of Partial

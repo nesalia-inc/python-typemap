@@ -1,0 +1,163 @@
+---
+title: Tutorial
+description: Step-by-step guide to using typemap
+---
+
+A hands-on tutorial to learn typemap by building real things.
+
+## Prerequisites
+
+- Python 3.14+
+- Basic understanding of Python types
+- (Optional) TypeScript knowledge - helps but not required
+
+---
+
+## Step 1: Your First Type Evaluation
+
+Let's start with something simple:
+
+```python
+from typemap import eval_typing
+import typemap_extensions as tm
+
+class User:
+    name: str
+    age: int
+    email: str
+
+# Evaluate a simple class
+result = eval_typing(User)
+print(result)  # <class 'User'>
+```
+
+That was easy! But not very useful. Let's do more.
+
+---
+
+## Step 2: Getting Field Names
+
+Use `KeyOf` to get all field names:
+
+```python
+from typemap import eval_typing
+import typemap_extensions as tm
+
+class User:
+    name: str
+    age: int
+    email: str
+
+keys = eval_typing(tm.KeyOf[User])
+print(keys)
+# tuple[Literal['name'], Literal['age'], Literal['email']]
+```
+
+Now you have the field names as types!
+
+---
+
+## Step 3: Transforming Types
+
+Let's try `Partial` to make fields optional:
+
+```python
+from typemap import eval_typing
+import typemap_extensions as tm
+
+class User:
+    name: str
+    age: int
+    email: str
+
+partial = eval_typing(tm.Partial[User])
+# User now has: name: str | None, age: int | None, email: str | None
+```
+
+---
+
+## Step 4: Building Something Real
+
+Let's build a simple user profile API response:
+
+```python
+from typemap import eval_typing
+import typemap_extensions as tm
+from typing import TypedDict
+
+class User:
+    id: int
+    username: str
+    email: str
+    password_hash: str  # Sensitive!
+    created_at: str
+    bio: str | None
+
+# Create a safe version for API responses
+PublicProfile = eval_typing(tm.Omit[User, tuple["password_hash"]])
+
+# Now use it
+# GET /users/123 returns PublicProfile type
+```
+
+---
+
+## Step 5: Dynamic Form Generation
+
+Let's build a form generator:
+
+```python
+from typemap import eval_typing
+import typemap_extensions as tm
+from dataclasses import dataclass
+
+@dataclass
+class Field:
+    name: str
+    type: type
+
+def generate_form(cls: type):
+    """Generate a form from a class."""
+    # Get all attributes
+    attrs = eval_typing(tm.Attrs[cls])
+
+    fields = []
+    for attr in attrs:
+        name = eval_typing(attr.name)  # Get the literal name
+        field_type = attr.type
+
+        # Map Python types to form fields
+        if field_type is str:
+            field = Field(name=name, type=str)
+        elif field_type is int:
+            field = Field(name=name, type=int)
+        # ... more mappings
+
+        fields.append(field)
+
+    return fields
+
+# Use it!
+class RegistrationForm:
+    username: str
+    email: str
+    password: str
+
+form_fields = generate_form(RegistrationForm)
+# Returns list of Field objects
+```
+
+---
+
+## Step 6: Next Steps
+
+Now you know the basics! Here's what to explore next:
+
+1. **[Pick](/docs/pick)** - Select specific fields
+2. **[DeepPartial](/docs/deeppartial)** - Recursive optional
+3. **[NewProtocol](/docs/newprotocol)** - Create protocols
+4. **[Examples](/docs/examples)** - See real-world use cases
+
+<Callout>
+  **Challenge**: Try building a simple ORM-like query builder using `KeyOf` and `Pick`!
+</Callout>

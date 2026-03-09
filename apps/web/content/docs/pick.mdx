@@ -1,0 +1,80 @@
+---
+title: Pick
+description: Select specific fields from a type
+---
+
+Pick only certain fields from a type, excluding all others.
+
+## Quick Example
+
+```python
+import typemap_extensions as tm
+from typemap import eval_typing
+
+class User:
+    id: int
+    name: str
+    email: str
+    password_hash: str
+
+# Pick only id and name
+PublicUser = eval_typing(tm.Pick[User, tuple["id", "name"]])
+# Results in: class with id: int, name: str
+```
+
+## Signature
+
+```python
+class Pick[T, K]:
+    """Pick specific fields from a type."""
+```
+
+## Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `T` | `type` | Source type |
+| `K` | `tuple` | Fields to pick (as Literals) |
+
+## Usage
+
+### Basic Pick
+
+```python
+class Product:
+    id: int
+    name: str
+    price: float
+    description: str
+    created_at: datetime
+
+# Only keep what's needed for a list view
+ProductList = eval_typing(tm.Pick[Product, tuple["id", "name", "price"]])
+```
+
+### Single Field
+
+```python
+# Pick just one field
+JustName = eval_typing(tm.Pick[User, tuple["name"]])
+```
+
+## Use Cases
+
+- **API responses** - Exclude sensitive fields (passwords, hashes)
+- **List views** - Only include display fields
+- **Forms** - Select fields to show in a form
+
+## TypeScript Comparison
+
+```typescript
+// TypeScript
+type PublicUser = Pick<User, "id" | "name">;
+
+// typemap
+PublicUser = eval_typing(tm.Pick[User, tuple["id", "name"]])
+```
+
+## See Also
+
+- [Omit](/docs/omit) - Exclude specific fields instead
