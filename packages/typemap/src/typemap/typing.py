@@ -418,6 +418,21 @@ class Omit[T, K]:
     pass
 
 
+class PropsOnly[T]:
+    """Extract only Property fields, excluding Link/MultiLink relations.
+
+    Creates a new class containing only Property fields,
+    excluding relation fields (Link, MultiLink).
+
+    Usage:
+        type UserProps = PropsOnly[User]
+        # Results in: {id: int, name: str, email: str}
+        # (posts and profile relations are excluded)
+    """
+
+    pass
+
+
 ##################################################################
 
 # TODO: type better

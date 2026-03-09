@@ -49,6 +49,7 @@ from typemap.typing import (
     Param,
     Partial,
     Pick,
+    PropsOnly,
     RaiseError,
     Required,
     Slice,
@@ -1476,6 +1477,80 @@ def _eval_Partial(tp, *, ctx):
         f"Partial_{tp.__name__ if hasattr(tp, '__name__') else 'Anonymous'}"
     )
     return type(class_name, (), {"__annotations__": new_annotations})
+
+
+@type_eval.register_evaluator(PropsOnly)
+def _eval_PropsOnly(tp, *, ctx):
+    """Evaluate PropsOnly[T] to extract only Property fields.
+
+    Creates a new class containing only Property fields,
+    excluding relation fields (Link, MultiLink).
+    """
+    from typing import get_args
+
+    tp = _eval_types(tp, ctx)
+
+    # Get all attributes
+    attrs_result = _eval_Attrs(tp, ctx=ctx)
+    attrs_args = get_args(attrs_result)
+
+    if not attrs_args:
+        # No attributes, return the type as-is
+        return tp
+
+    new_annotations = {}
+
+    for member in attrs_args:
+        member_type = _eval_types(member.type, ctx)
+
+        # Get the origin type (e.g., Property from Property[int])
+        origin = typing.get_origin(member_type)
+
+        if origin is not None:
+            # Check if origin is Property or a subclass of Pointer but not Link
+            origin_name = getattr(origin, '__name__', '')
+
+            # Include if it's a Property (not a Link or MultiLink)
+            if 'Property' in origin_name or (
+                hasattr(origin, '__mro__')
+                and Pointer in origin.__mro__
+                and Link not in origin.__mro__
+            ):
+                # Extract the type argument (e.g., int from Property[int])
+                type_arg = get_args(member_type)
+                if type_arg:
+                    # Get the member name
+                    name_result = _eval_types(member.name, ctx)
+                    name = (
+                        get_args(name_result)[0]
+                        if hasattr(name_result, "__args__")
+                        else name_result
+                    )
+                    new_annotations[name] = type_arg[0]
+
+    if not new_annotations:
+        return tp
+
+    class_name = (
+        f"PropsOnly_{tp.__name__ if hasattr(tp, '__name__') else 'Anonymous'}"
+    )
+    return type(class_name, (), {"__annotations__": new_annotations})
+
+
+# Base classes for Link type detection in PropsOnly
+class Pointer[T]:
+    """Base class for pointer types (Property, Link, MultiLink)."""
+    pass
+
+
+class Link(Pointer):
+    """Base class for linked types (one-to-one or one-to-many)."""
+    pass
+
+
+class MultiLink(Link):
+    """Base class for multi-link types (one-to-many relationships)."""
+    pass
 
 
 @type_eval.register_evaluator(Required)
