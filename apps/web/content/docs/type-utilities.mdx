@@ -1,0 +1,126 @@
+---
+title: Type Utilities
+description: Utility types for type transformation
+---
+
+## Pick
+
+Select specific fields from a type:
+
+```python
+import typemap_extensions as tm
+from typemap import eval_typing
+
+class User:
+    name: str
+    age: int
+    email: str
+    password: str
+
+# Pick only name and email
+PublicUser = eval_typing(tm.Pick[User, tuple["name", "email"]])
+# Results in: class with name: str, email: str
+```
+
+## Omit
+
+Exclude specific fields from a type:
+
+```python
+import typemap_extensions as tm
+from typemap import eval_typing
+
+class User:
+    name: str
+    age: int
+    email: str
+    password: str
+
+# Omit password
+SafeUser = eval_typing(tm.Omit[User, tuple["password"]])
+# Results in: class with name: str, age: int, email: str
+```
+
+## Partial
+
+Make all fields optional (non-recursive):
+
+```python
+import typemap_extensions as tm
+from typemap import eval_typing
+
+class User:
+    name: str
+    age: int
+
+PartialUser = eval_typing(tm.Partial[User])
+# Results in: class with name: str | None, age: int | None
+```
+
+## DeepPartial
+
+Make all fields recursively optional:
+
+```python
+import typemap_extensions as tm
+from typemap import eval_typing
+
+class Address:
+    street: str
+    city: str
+
+class User:
+    name: str
+    address: Address
+
+DeepUser = eval_typing(tm.DeepPartial[User])
+# Results in: class with name: str | None, address: Address | None (recursively)
+```
+
+## Required
+
+Remove Optional from all fields:
+
+```python
+import typemap_extensions as tm
+from typemap import eval_typing
+
+class OptionalUser:
+    name: str | None
+    age: int | None
+
+RequiredUser = eval_typing(tm.Required[OptionalUser])
+# Results in: class with name: str, age: int
+```
+
+## KeyOf
+
+Get all member names as a tuple of Literals:
+
+```python
+import typemap_extensions as tm
+from typemap import eval_typing
+
+class User:
+    name: str
+    age: int
+    email: str
+
+keys = eval_typing(tm.KeyOf[User])
+# Returns: tuple[Literal["name"], Literal["age"], Literal["email"]]
+```
+
+## Template
+
+Build template literal strings:
+
+```python
+import typemap_extensions as tm
+from typing import Literal
+from typemap import eval_typing
+
+type Resource = Literal["users", "posts", "comments"]
+
+result = eval_typing(tm.Template["api/v1/", Resource])
+# Returns: Literal["api/v1/users"] | Literal["api/v1/posts"] | Literal["api/v1/comments"]
+```

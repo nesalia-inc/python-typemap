@@ -1,0 +1,143 @@
+---
+title: API Reference
+description: Full API documentation
+---
+
+## Main Module
+
+### typemap
+
+The main package for type evaluation.
+
+```python
+from typemap import eval_typing
+```
+
+### eval_typing
+
+Evaluate a type expression at runtime.
+
+```python
+from typemap import eval_typing
+
+eval_typing(type_expr: Any) -> Any
+```
+
+**Parameters:**
+
+- `type_expr` - The type expression to evaluate
+
+**Returns:**
+
+- The evaluated type
+
+**Raises:**
+
+- `TypeMapError` - If type evaluation fails
+- `StuckException` - If type evaluation is stuck
+
+### eval_call
+
+Evaluate a callable with type arguments.
+
+```python
+from typemap.type_eval import eval_call
+
+eval_call(func: Callable, *args, **kwargs) -> Any
+```
+
+### eval_call_with_types
+
+Evaluate a callable with explicit type arguments.
+
+```python
+from typemap.type_eval import eval_call_with_types
+
+eval_call_with_types(func: Callable, types: dict[str, Any]) -> Any
+```
+
+## typemap_extensions
+
+The extension module containing all type operators.
+
+```python
+import typemap_extensions as tm
+```
+
+### Core Operators
+
+| Operator | Description |
+|----------|-------------|
+| `Member[N, T, Q, I, D]` | Describes a class member |
+| `Attrs[T]` | Get all attribute members |
+| `Members[T]` | Get all members (including methods) |
+| `Iter[T]` | Iterate over type contents |
+| `GetMember[T, S]` | Get a specific member |
+| `GetMemberType[T, S]` | Get the type of a member |
+| `GetArg[T, B, I]` | Get type argument by index |
+| `GetArgs[T, B]` | Get all type arguments |
+
+### Boolean Operators
+
+| Operator | Description |
+|----------|-------------|
+| `IsAssignable[T, S]` | Check if T is assignable to S |
+| `IsEquivalent[T, S]` | Check if T and S are equivalent |
+| `Bool[T]` | Convert to boolean literal |
+
+### Creation Operators
+
+| Operator | Description |
+|----------|-------------|
+| `NewProtocol[*Ms]` | Create a new protocol |
+| `NewTypedDict[*Ms]` | Create a new TypedDict |
+| `UpdateClass[*Ps]` | Update an existing class |
+
+### Utility Types
+
+| Type | Description |
+|------|-------------|
+| `Pick[T, K]` | Pick specific fields |
+| `Omit[T, K]` | Omit specific fields |
+| `Partial[T]` | Make all fields optional |
+| `DeepPartial[T]` | Recursively make fields optional |
+| `Required[T]` | Remove Optional |
+| `KeyOf[T]` | Get all member names |
+| `Template[*Parts]` | Build template strings |
+
+### String Types
+
+| Type | Description |
+|------|-------------|
+| `Uppercase[S]` | Uppercase a string literal |
+| `Lowercase[S]` | Lowercase a string literal |
+| `Capitalize[S]` | Capitalize a string literal |
+| `Uncapitalize[S]` | Uncapitalize a string literal |
+
+### Special Forms
+
+| Form | Description |
+|------|-------------|
+| `RaiseError[S, *Ts]` | Generate a type error |
+| `GetAnnotations[T]` | Get annotations |
+| `DropAnnotations[T]` | Drop annotations |
+| `Length[S]` | Get tuple length |
+| `Slice[S, Start, End]` | Slice a tuple |
+
+## Exceptions
+
+### TypeMapError
+
+Raised when type evaluation fails.
+
+```python
+from typemap.type_eval import TypeMapError
+```
+
+### StuckException
+
+Raised when type evaluation is stuck (cannot be evaluated further).
+
+```python
+from typemap.type_eval import StuckException
+```

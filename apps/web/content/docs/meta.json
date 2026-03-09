@@ -1,0 +1,26 @@
+{
+  "index": {
+    "title": "Introduction",
+    "type": "page"
+  },
+  "installation": {
+    "title": "Installation",
+    "type": "page"
+  },
+  "type-evaluation": {
+    "title": "Type Evaluation",
+    "type": "page"
+  },
+  "type-operators": {
+    "title": "Type Operators",
+    "type": "page"
+  },
+  "type-utilities": {
+    "title": "Type Utilities",
+    "type": "page"
+  },
+  "api-reference": {
+    "title": "API Reference",
+    "type": "page"
+  }
+}

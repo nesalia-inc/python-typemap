@@ -1,0 +1,49 @@
+---
+title: Installation
+description: How to install and set up typemap
+---
+
+## Requirements
+
+- Python 3.14+
+- typing_extensions >= 4.0
+
+## Install from PyPI
+
+```bash
+pip install typemap
+```
+
+## Install from Source
+
+```bash
+git clone https://github.com/nesalia-inc/python-typemap.git
+cd python-typemap/packages/typemap
+pip install -e .
+```
+
+## Development Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/nesalia-inc/python-typemap.git
+cd python-typemap
+
+# Install dependencies
+cd packages/typemap
+uv sync
+
+# Run tests
+uv run pytest
+```
+
+## Verify Installation
+
+```python
+import typemap
+from typemap import eval_typing
+import typemap_extensions as tm
+
+print("typemap installed successfully!")
+print(f"Version: {typemap.__version__}")
+```
