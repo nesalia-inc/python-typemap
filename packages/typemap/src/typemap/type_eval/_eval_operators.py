@@ -20,6 +20,7 @@ from typemap.type_eval._eval_typing import (
     EvalContext,
 )
 from typemap.typing import (
+    AdjustLink,
     Attrs,
     Bool,
     Capitalize,
@@ -1612,3 +1613,67 @@ def _eval_Omit(tp, keys, *, ctx):
         f"Omit_{tp.__name__ if hasattr(tp, '__name__') else 'Anonymous'}"
     )
     return type(class_name, (), {"__annotations__": new_annotations})
+
+
+@type_eval.register_evaluator(AdjustLink)
+def _eval_AdjustLink(tgt, link_ty, *, ctx):
+    """Evaluate AdjustLink[Tgt, LinkTy] to wrap in list if MultiLink.
+
+    Returns list[tgt] if LinkTy is a MultiLink (one-to-many),
+    otherwise returns tgt directly (one-to-one).
+
+    Note: This uses heuristic detection based on the LinkTy origin.
+    For precise behavior, use as a type alias with IsAssignable.
+    """
+    # Evaluate the arguments first
+    tgt = _eval_types(tgt, ctx)
+    link_ty = _eval_types(link_ty, ctx)
+
+    # Get the origin type (e.g., Link from Link[SomeType])
+    origin = typing.get_origin(link_ty)
+
+    if origin is None:
+        # Not a generic type, return as-is
+        return tgt
+
+    # Check the origin's name to determine if it's a MultiLink
+    # MultiLink types typically have "Multi" or "List" or are subclasses
+    # that are not the base Link
+    origin_name = getattr(origin, "__name__", "")
+
+    # Heuristic: if origin name contains "Multi" or ends with "s" (common for lists)
+    # or is explicitly a multi-link pattern
+    if "Multi" in origin_name or origin_name.endswith("s"):
+        return list[tgt]
+
+    # Check MRO for Link/MultiLink pattern
+    if hasattr(origin, "__mro__"):
+        mro = origin.__mro__
+        # Check if it's a Link but has something beyond Link in MRO
+        # (indicating it's a specialized variant like MultiLink)
+        if Link in mro and len(mro) > mro.index(Link) + 1:
+            # Has additional classes beyond Link - likely MultiLink
+            return list[tgt]
+
+    # Default: return as-is (one-to-one relationship)
+    return tgt
+
+
+# Base classes for Link type detection in AdjustLink
+# Users would typically subclass these in their own code
+class Pointer[T]:
+    """Base class for pointer types (Property, Link, MultiLink)."""
+
+    pass
+
+
+class Link(Pointer):
+    """Base class for linked types (one-to-one or one-to-many)."""
+
+    pass
+
+
+class MultiLink(Link):
+    """Base class for multi-link types (one-to-many relationships)."""
+
+    pass
