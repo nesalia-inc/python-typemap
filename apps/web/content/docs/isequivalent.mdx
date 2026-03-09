@@ -1,0 +1,63 @@
+---
+title: IsEquivalent
+description: Check if two types are equivalent
+---
+
+Check if two types are structurally equivalent.
+
+## Quick Example
+
+```python
+import typemap_extensions as tm
+from typemap import eval_typing
+
+result = eval_typing(tm.IsEquivalent[int, int])
+# Returns: True
+
+result = eval_typing(tm.IsEquivalent[int, float])
+# Returns: False
+```
+
+## Signature
+
+```python
+@_SpecialForm
+def IsEquivalent(self, tps):
+    """Check if T and S are equivalent."""
+```
+
+## What It Does
+
+`IsEquivalent` returns `True` if both types are **mutually assignable** (each can be assigned to the other).
+
+## Usage
+
+### Basic Checks
+
+```python
+# Same types are equivalent
+eval_typing(tm.IsEquivalent[int, int])        # True
+
+# Different types are not equivalent
+eval_typing(tm.IsEquivalent[int, float])      # False
+
+# Union with same elements
+eval_typing(tm.IsEquivalent[int | str, int | str])  # True
+```
+
+## IsAssignable vs IsEquivalent
+
+| Check | Meaning |
+|-------|---------|
+| `IsAssignable[A, B]` | A can be assigned to B |
+| `IsEquivalent[A, B]` | A can be assigned to B AND B can be assigned to A |
+
+## Use Cases
+
+- **Type comparison** - Check if types are the same
+- **Generic constraints** - Verify type parameters match
+- **Duck typing** - Check structural equivalence
+
+## See Also
+
+- [IsAssignable](/docs/isassignable) - Check one-way assignability

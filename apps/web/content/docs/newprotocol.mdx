@@ -1,0 +1,84 @@
+---
+title: NewProtocol
+description: Create new protocols dynamically
+---
+
+Create a new protocol (structural type) at runtime.
+
+## Quick Example
+
+```python
+import typemap_extensions as tm
+from typing import Literal
+
+# Create a protocol with specific members
+MyProtocol = tm.NewProtocol[
+    tm.Member[Literal["id"], int],
+    tm.Member[Literal["name"], str],
+]
+```
+
+## Signature
+
+```python
+class NewProtocol[*Ms]:
+    """Create a new structural protocol."""
+```
+
+## What It Does
+
+`NewProtocol` creates a new **protocol** - a type that defines a structure rather than a concrete implementation.
+
+## Usage
+
+### Basic Protocol
+
+```python
+Named = tm.NewProtocol[
+    tm.Member[Literal["name"], str]
+]
+
+# Any class with a `name: str` field satisfies this protocol
+class Person:
+    name: str
+    age: int
+
+# Person is assignable to Named!
+```
+
+### With Multiple Members
+
+```python
+Identifiable = tm.NewProtocol[
+    tm.Member[Literal["id"], int],
+    tm.Member[Literal["name"], str],
+    tm.Member[Literal["email"], str],
+]
+```
+
+### Combining with Other Operators
+
+```python
+# Create protocol from existing class fields
+type PublicFields = tm.NewProtocol[
+    *[m for m in tm.Iter[tm.Attrs[User]] if m.name != "password"]
+]
+```
+
+## Protocols vs Classes
+
+| Feature | Class | Protocol |
+|---------|-------|----------|
+| Inheritance | Yes | Implicit |
+| Methods | Required | Optional |
+| Duck typing | No | Yes |
+
+## Use Cases
+
+- **Define interfaces** - Create contracts without inheritance
+- **Type-safe serialization** - Define expected structure
+- **Plugin systems** - Define extension points
+
+<Callout>
+  **Tip**: Protocols are great for defining what a type should "look like" without coupling to implementation.
+</Callout>

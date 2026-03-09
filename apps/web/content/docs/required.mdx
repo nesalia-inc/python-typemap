@@ -1,0 +1,86 @@
+---
+title: Required
+description: Remove Optional from all fields
+---
+
+Make all fields required by removing `| None`.
+
+## Quick Example
+
+```python
+import typemap_extensions as tm
+from typemap import eval_typing
+
+class User:
+    name: str | None
+    age: int | None
+    email: str | None
+
+RequiredUser = eval_typing(tm.Required[User])
+# Results in: name: str, age: int, email: str
+```
+
+## Signature
+
+```python
+class Required[T]:
+    """Remove Optional from all fields."""
+```
+
+## What It Does
+
+`Required` is the **inverse** of Partial. It removes `| None` from all fields.
+
+## Usage
+
+### Basic Required
+
+```python
+class Config:
+    host: str | None
+    port: int | None
+    debug: bool | None
+
+FullConfig = eval_typing(tm.Required[Config])
+# Results in: host: str, port: int, debug: bool
+```
+
+### With TypedDict
+
+```python
+# TypedDict with optional fields
+class UserDict(TypedDict, total=False):
+    name: str
+    age: int
+
+# Make all required
+StrictUser = eval_typing(tm.Required[UserDict])
+```
+
+## Use Cases
+
+- **Validation** - Ensure all fields are present
+- **Transformation** - Convert optional configs to required
+- **Type narrowing** - Remove ambiguity
+
+## Partial vs Required
+
+| Operation | `str` becomes | `str \| None` becomes |
+|-----------|----------------|------------------------|
+| `Partial` | `str \| None` | `str \| None` |
+| `Required` | `str` | `str` |
+
+## TypeScript Comparison
+
+```typescript
+// TypeScript
+type RequiredUser = Required<Partial<User>>;
+
+// typemap
+RequiredUser = eval_typing(tm.Required[tm.Partial[User]])
+```
+
+## See Also
+
+- [Partial](/docs/partial) - Make fields optional
+- [DeepPartial](/docs/deeppartial) - Recursively make optional

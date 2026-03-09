@@ -1,0 +1,92 @@
+---
+title: Iter
+description: Iterate over type contents in comprehensions
+---
+
+Enable iteration over types in type-level comprehensions.
+
+## Quick Example
+
+```python
+import typemap_extensions as tm
+from typing import Literal
+
+class User:
+    name: str
+    age: int
+
+# Iterate over attributes in a type alias
+type AllNames = tuple[
+    m.name for m in tm.Iter[tm.Attrs[User]]
+]
+# Results in: tuple[Literal["name"], Literal["age"]]
+```
+
+## Signature
+
+```python
+@_SpecialForm
+def Iter(self, tp):
+    """Enable iteration over a type."""
+```
+
+## What It Does
+
+`Iter` makes a type **iterable** in type-level comprehensions. It's used with:
+
+- `Attrs[T]` - Iterate over attributes
+- `Members[T]` - Iterate over all members
+- `FromUnion[T]` - Iterate over union elements
+
+## Usage
+
+### With Attrs
+
+```python
+# Get all field names
+type FieldNames = tuple[
+    m.name for m in tm.Iter[tm.Attrs[MyClass]]
+]
+```
+
+### With Members
+
+```python
+# Get all member names (including methods)
+type MemberNames = tuple[
+    m.name for m in tm.Iter[tm.Members[MyClass]]
+]
+```
+
+### With FromUnion
+
+```python
+type StringUnion = str | int | None
+
+# Iterate over union elements
+type UnionTypes = tuple[
+    t for t in tm.Iter[tm.FromUnion[StringUnion]]
+]
+```
+
+## Why Is It Needed?
+
+Python's type system doesn't support iteration by default. `Iter` is a special form that enables this:
+
+```python
+# This doesn't work:
+# for m in Attrs[User]: ...
+
+# But this does:
+# for m in Iter[Attrs[User]]: ...
+```
+
+## Use Cases
+
+- **Code generation** - Generate repetitive code
+- **Type transformations** - Apply operations to all members
+- **Metadata extraction** - Collect information about types
+
+<Callout>
+  **Note**: `Iter` is mainly used in type aliases, not with `eval_typing`.
+</Callout>

@@ -1,0 +1,196 @@
+---
+title: Examples
+description: Real-world examples and use cases
+---
+
+Practical examples of how to use typemap in real applications.
+
+## 1. Safe API Responses
+
+Exclude sensitive fields from API responses:
+
+```python
+from typemap import eval_typing
+import typemap_extensions as tm
+
+class User:
+    id: int
+    username: str
+    email: str
+    password_hash: str
+    role: str
+    created_at: str
+
+# For public API - exclude password
+PublicUser = eval_typing(tm.Omit[User, tuple["password_hash"]])
+
+# For admin API - keep more fields
+AdminUser = eval_typing(tm.Pick[User, tuple["id", "email", "role"]])
+```
+
+## 2. Dynamic Serialization
+
+Serialize only specific fields to JSON:
+
+```python
+from typemap import eval_typing
+import typemap_extensions as tm
+
+class Article:
+    id: int
+    title: str
+    content: str
+    author_id: int
+    draft: bool
+    created_at: str
+
+# Get only published articles
+PublishedArticle = eval_typing(tm.Omit[Article, tuple["draft"]])
+
+# Get preview (no content)
+ArticlePreview = eval_typing(tm.Pick[Article, tuple["id", "title"]])
+```
+
+## 3. Type-Safe Configuration
+
+Create type-safe configuration classes:
+
+```python
+from typemap import eval_typing
+import typemap_extensions as tm
+
+class DatabaseConfig:
+    host: str
+    port: int
+    database: str
+    username: str
+    password: str  # Sensitive!
+    pool_size: int
+
+class AppConfig:
+    debug: bool
+    database: DatabaseConfig
+    log_level: str
+
+# Make database password optional (might come from env)
+PartialConfig = eval_typing(tm.Partial[AppConfig])
+```
+
+## 4. Form Builders
+
+Generate forms from data classes:
+
+```python
+from typemap import eval_typing
+import typemap_extensions as tm
+
+class RegistrationForm:
+    username: str
+    email: str
+    password: str
+    confirm_password: str
+
+# Get all fields for form generation
+form_schema = eval_typing(tm.Attrs[RegistrationForm])
+
+# Build form fields dynamically
+def build_form(cls):
+    for member in eval_typing(tm.Attrs[cls]):
+        field_name = eval_typing(member.name)
+        field_type = member.type
+
+        # Map to HTML input type
+        if field_type is str:
+            input_type = "text"
+        elif field_type is int:
+            input_type = "number"
+        # ... etc
+
+        yield {"name": field_name, "type": input_type}
+```
+
+## 5. Dynamic Validation
+
+Create validators based on types:
+
+```python
+from typemap import eval_typing
+import typemap_extensions as tm
+
+class UserSchema:
+    name: str
+    age: int
+    email: str
+
+def validate_field(name: str, value: any, field_type: type) -> bool:
+    """Validate a single field."""
+    if field_type is str:
+        return isinstance(value, str)
+    elif field_type is int:
+        return isinstance(value, int)
+    return True
+
+# Validate all fields
+def validate(obj, schema):
+    attrs = eval_typing(tm.Attrs[schema])
+
+    for member in attrs:
+        field_name = eval_typing(member.name)
+        field_type = member.type
+
+        if not validate_field(field_name, getattr(obj, field_name), field_type):
+            return False
+    return True
+```
+
+## 6. Plugin System
+
+Define plugin interfaces with protocols:
+
+```python
+import typemap_extensions as tm
+from typing import Literal
+
+# Define what a plugin must implement
+class Plugin:
+    name: str
+    version: str
+    execute: callable
+
+PluginProtocol = eval_typing(tm.NewProtocol[
+    tm.Member[Literal["name"], str],
+    tm.Member[Literal["version"], str],
+    tm.Member[Literal["execute"], callable],
+])
+
+# Any class with these methods satisfies the protocol
+class MyPlugin:
+    name = "my_plugin"
+    version = "1.0.0"
+
+    def execute(self):
+        pass
+
+# Type check at runtime
+def register_plugin(plugin):
+    if eval_typing(tm.IsAssignable[type(plugin), PluginProtocol]):
+        print("Valid plugin!")
+    else:
+        print("Invalid plugin!")
+```
+
+---
+
+## More Examples
+
+These are just starting points! With runtime types, you can build:
+
+- **ORMs** (like Prisma, SQLAlchemy)
+- **Form libraries** (like Django forms, WTForms)
+- **API generators** (like FastAPI, Flask)
+- **Serialization frameworks** (like Pydantic, Marshmallow)
+- **Testing utilities** (like Factory Boy, Faker)
+
+<Callout>
+  **Share Your Code**: Have a cool example? Open a PR to add it here!
+</Callout>

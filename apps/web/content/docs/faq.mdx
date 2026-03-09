@@ -1,0 +1,136 @@
+---
+title: FAQ
+description: Frequently Asked Questions
+---
+
+Answers to common questions about typemap.
+
+---
+
+## General
+
+### Why do I need Python 3.14?
+
+typemap uses features from [PEP 827](https://peps.python.org/pep-0827/), which introduces new type manipulation operators to Python. These features are only available in Python 3.14+.
+
+### Is this production ready?
+
+**No.** typemap is a **prototype** implementing PEP 827. The PEP is still a draft and may change. Use in production at your own risk!
+
+### What's the difference between this and typing_extensions?
+
+`typing_extensions` provides backports of typing features to older Python versions. typemap provides **runtime type evaluation** - a different concept.
+
+### Is this related to TypeScript?
+
+Yes! PEP 827 is heavily inspired by TypeScript's type system. If you know TypeScript types, you'll feel at home with typemap.
+
+---
+
+## Installation
+
+### How do I install typemap?
+
+```bash
+pip install typemap
+```
+
+### What are the requirements?
+
+- Python 3.14+
+- typing_extensions >= 4.0
+
+---
+
+## Usage
+
+### How do I get started?
+
+1. Install typemap: `pip install typemap`
+2. Read the [Tutorial](/docs/tutorial)
+3. Explore the [Examples](/docs/examples)
+
+### What's `typemap_extensions`?
+
+`typemap_extensions` is where all the type operators live. Import it as:
+
+```python
+import typemap_extensions as tm
+```
+
+### When should I use `eval_typing`?
+
+Use `eval_typing` when you need the **actual type** at runtime:
+
+```python
+result = eval_typing(tm.KeyOf[User])
+# Now `result` is a tuple you can use
+```
+
+Some operators can be used directly in type aliases without evaluation.
+
+---
+
+## Troubleshooting
+
+### My type isn't being evaluated
+
+Make sure to wrap it in `eval_typing`:
+
+```python
+# Wrong
+result = tm.KeyOf[User]
+
+# Correct
+result = eval_typing(tm.KeyOf[User])
+```
+
+### I'm getting `StuckException`
+
+This means typemap can't evaluate the type further. This happens with:
+- Complex generic types
+- Types from external libraries
+- Recursive types
+
+### It's slow on large types
+
+Runtime type evaluation is computationally expensive. For large classes, consider caching results or limiting introspection depth.
+
+---
+
+## Contributing
+
+### How can I contribute?
+
+1. Star the [GitHub repo](https://github.com/nesalia-inc/python-typemap)
+2. Report bugs
+3. Share your use cases
+4. Contribute code (after PEP is finalized!)
+
+### Can I add new operators?
+
+The operators are defined by PEP 827. You can propose new operators, but they'd need to be accepted into the PEP first.
+
+---
+
+## The Future
+
+### Will this work with older Python versions?
+
+Once PEP 827 is finalized and implemented, it might be backported via `typing_extensions`. But for now, Python 3.14+ is required.
+
+### Will typemap be maintained after PEP 827 is accepted?
+
+Probably! Once PEP 827 is finalized, typemap will be updated to match the final specification.
+
+### How can I help the PEP get accepted?
+
+- Star and share the original [vercel/python-typemap](https://github.com/vercel/python-typemap)
+- Build projects using typemap
+- Provide feedback to the PEP authors
+
+---
+
+<Callout>
+  **Still have questions?** Open an issue on GitHub!
+</Callout>

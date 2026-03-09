@@ -1,0 +1,60 @@
+---
+title: UpdateClass
+description: Generate class modifications at runtime
+---
+
+Modify or extend existing classes dynamically.
+
+## Quick Example
+
+```python
+import typemap_extensions as tm
+from typing import Literal, Callable, Self
+
+type InitFn[T] = tm.Member[
+    Literal["__init__"],
+    Callable[[tm.Param[Literal["self"], Self], *params], None],
+]
+
+class Model:
+    def __init_subclass__(cls) -> tm.UpdateClass[InitFn[cls]]:
+        super().__init_subclass__()
+```
+
+## Signature
+
+```python
+class UpdateClass[*Ms]:
+    """Update an existing class with new members."""
+```
+
+## What It Does
+
+`UpdateClass` is used with `__init_subclass__` to dynamically add or modify members when a class is subclassed.
+
+## Usage
+
+### Add Methods Dynamically
+
+```python
+class MyBase:
+    def __init_subclass__(cls, **kwargs) -> tm.UpdateClass[...]:
+        # Add a method to each subclass
+        cls.describe = lambda self: f"I'm a {cls.__name__}"
+        super().__init_subclass__()
+
+class User(MyBase):
+    pass
+
+User().describe()  # "I'm a User"
+```
+
+## Use Cases
+
+- **Dataclass-like behavior** - Auto-generate `__init__`, `__repr__`, etc.
+- **ORM models** - Add query methods to models
+- **Plugin systems** - Extend classes dynamically
+
+<Callout>
+  **Note**: This is an advanced feature. Most users won't need to use `UpdateClass` directly.
+</Callout>

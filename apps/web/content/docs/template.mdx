@@ -1,0 +1,87 @@
+---
+title: Template
+description: Build template literal strings
+---
+
+Build string literal types from parts.
+
+## Quick Example
+
+```python
+import typemap_extensions as tm
+from typing import Literal
+from typemap import eval_typing
+
+type Resource = Literal["users", "posts", "comments"]
+
+result = eval_typing(tm.Template["api/v1/", Resource])
+# Returns: Literal["api/v1/users"] | Literal["api/v1/posts"] | Literal["api/v1/comments"]
+```
+
+## Signature
+
+```python
+class Template[*Parts]:
+    """Template literal string builder."""
+```
+
+## What It Does
+
+`Template` concatenates string literal types at **compile time** to create new string literal types.
+
+## Usage
+
+### Simple Concatenation
+
+```python
+type Prefix = Literal["api"]
+
+result = eval_typing(tm.Template[Prefix, "/v1"])
+# Returns: Literal["api/v1"]
+```
+
+### Multiple Parts
+
+```python
+type Version = Literal["v1", "v2"]
+type Resource = Literal["users", "posts"]
+
+result = eval_typing(tm.Template["api/", Version, "/", Resource])
+# Returns: Literal["api/v1/users"] | Literal["api/v1/posts"] |
+#          Literal["api/v2/users"] | Literal["api/v2/posts"]
+```
+
+### Dynamic Paths
+
+```python
+type HTTPMethod = Literal["get", "post", "put", "delete"]
+
+# Generate all possible routes
+type Route = tm.Template[HTTPMethod, "-", Literal["user"]]
+# Literal["get-user"] | Literal["post-user"] | ...
+```
+
+## Use Cases
+
+- **API routes** - Build type-safe routes
+- **Event names** - Create event type unions
+- **Naming conventions** - Generate related names
+
+## TypeScript Comparison
+
+```typescript
+// TypeScript
+type Route = `api/${"v1" | "v2"}/${"users" | "posts"}`;
+
+// typemap
+Route = eval_typing(tm.Template[
+    Literal["api/"],
+    Literal["v1" | "v2"],
+    Literal["/"],
+    Literal["users" | "posts"]
+])
+```
+
+<Callout>
+  **Note**: All parts must be string literal types for Template to work.
+</Callout>

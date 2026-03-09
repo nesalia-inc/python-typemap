@@ -1,0 +1,78 @@
+---
+title: KeyOf
+description: Get all member names as tuple of Literals
+---
+
+Get all field/attribute names from a type.
+
+## Quick Example
+
+```python
+import typemap_extensions as tm
+from typemap import eval_typing
+
+class User:
+    name: str
+    age: int
+    email: str
+
+keys = eval_typing(tm.KeyOf[User])
+# Returns: tuple[Literal["name"], Literal["age"], Literal["email"]]
+```
+
+## Signature
+
+```python
+class KeyOf[T]:
+    """Return all member names as a tuple."""
+```
+
+## What It Does
+
+`KeyOf` returns all **member names** as a tuple of Literal types - similar to TypeScript's `keyof` operator.
+
+## Usage
+
+### Get All Field Names
+
+```python
+class Product:
+    id: int
+    name: str
+    price: float
+    in_stock: bool
+
+keys = eval_typing(tm.KeyOf[Product])
+# tuple[Literal["id"], Literal["name"], Literal["price"], Literal["in_stock"]]
+```
+
+### Use in Type Aliases
+
+```python
+# In a type alias, use with Iter
+type AllKeys = tm.KeyOf[User]
+# tuple[Literal["name"], Literal["age"], ...]
+```
+
+## Use Cases
+
+- **Dynamic field access** - Get all keys for iteration
+- **Validation** - Check if a key exists
+- **Serialization** - Get all field names for JSON
+- **Type-safe routing** - Generate routes from models
+
+## TypeScript Comparison
+
+```typescript
+// TypeScript
+type UserKeys = keyof User;
+// "name" | "age" | "email"
+
+// typemap
+UserKeys = eval_typing(tm.KeyOf[User])
+// tuple[Literal["name"], Literal["age"], Literal["email"]]
+```
+
+<Callout>
+  **Note**: Returns a tuple, not a union. Use with `eval_typing` to get the actual value.
+</Callout>

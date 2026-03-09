@@ -1,0 +1,63 @@
+---
+title: IsAssignable
+description: Check if a type is assignable to another
+---
+
+Check if one type can be assigned to another.
+
+## Quick Example
+
+```python
+import typemap_extensions as tm
+from typemap import eval_typing
+
+result = eval_typing(tm.IsAssignable[int, float])
+# Returns: True
+
+result = eval_typing(tm.IsAssignable[str, int])
+# Returns: False
+```
+
+## Signature
+
+```python
+@_SpecialForm
+def IsAssignable(self, tps):
+    """Check if T is assignable to S."""
+```
+
+## What It Does
+
+`IsAssignable` returns a **boolean literal** (`True` or `False`) indicating if a type is a subtype of another.
+
+## Usage
+
+### Basic Checks
+
+```python
+# int is assignable to float (widening)
+eval_typing(tm.IsAssignable[int, float])      # True
+
+# str is NOT assignable to int
+eval_typing(tm.IsAssignable[str, int])        # False
+
+# int is assignable to int
+eval_typing(tm.IsAssignable[int, int])        # True
+```
+
+### With Optional Types
+
+```python
+# int | None is assignable to int? (optional)
+eval_typing(tm.IsAssignable[int | None, int | None])  # True
+```
+
+## Use Cases
+
+- **Type guards** - Check types at runtime
+- **Conditional types** - Different logic based on type compatibility
+- **Validation** - Verify type relationships
+
+## See Also
+
+- [IsEquivalent](/docs/isequivalent) - Check if types are equivalent

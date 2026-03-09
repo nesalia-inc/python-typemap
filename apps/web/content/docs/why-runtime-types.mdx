@@ -1,0 +1,104 @@
+---
+title: Why Runtime Types?
+description: Learn why runtime type manipulation is useful
+---
+
+## Why Would You Need This?
+
+You might be thinking: *"I have type hints, that's enough for my type checker. Why would I need types at runtime?"*
+
+Here's why...
+
+## Real-World Use Cases
+
+### 1. Building an ORM
+
+Imagine building a Prisma-like ORM:
+
+```python
+class User:
+    id: Property[int]
+    name: Property[str]
+    email: Property[str]
+    posts: MultiLink["Post"]
+
+# Without runtime types:
+# How do you know which fields are relations vs scalar values?
+
+# With typemap:
+from typemap import eval_typing
+import typemap_extensions as tm
+
+# Get only scalar fields (not relations)
+UserProps = eval_typing(tm.PropsOnly[User])
+# Returns: {id: int, name: str, email: str}
+```
+
+### 2. Dynamic API Generation
+
+Build APIs automatically from your models:
+
+```python
+class User:
+    name: str
+    age: int
+
+# Generate a Pydantic schema at runtime!
+# Or create FastAPI endpoints dynamically
+```
+
+### 3. Type-Safe Serialization
+
+Transform types for different contexts:
+
+```python
+class User:
+    password_hash: str
+    email: str
+
+# Remove sensitive fields for API responses
+PublicUser = eval_typing(tm.Omit[User, tuple["password_hash"]])
+```
+
+### 4. Form Generation
+
+Build forms dynamically from data classes:
+
+```python
+class RegistrationForm:
+    username: str
+    email: str
+    password: str
+
+# Get all fields to generate a form
+# Each field knows its type, validators, etc.
+```
+
+## Comparison with Static Typing
+
+| Feature | Static (mypy) | Runtime (typemap) |
+|---------|---------------|-------------------|
+| When it runs | Build time | Execution time |
+| Can generate code | No | Yes |
+| Works with user input | No | Yes |
+| Type safety | Compile-time | Runtime |
+
+## When NOT to Use
+
+Runtime types aren't always the answer:
+
+- **For performance** - Static types are faster
+- **For type safety** - Use mypy at compile time
+- **Simple apps** - Regular Python types work fine
+
+## The Sweet Spot
+
+Use runtime types when you need to:
+
+1. Build something that adapts to user-defined types
+2. Generate code or schemas dynamically
+3. Inspect types from external sources (databases, APIs)
+
+<Callout>
+  **Best Practice**: Use both! Static types for safety, runtime types for flexibility.
+</Callout>

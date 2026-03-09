@@ -1,26 +1,32 @@
 {
-  "index": {
-    "title": "Introduction",
-    "type": "page"
-  },
-  "installation": {
-    "title": "Installation",
-    "type": "page"
-  },
-  "type-evaluation": {
-    "title": "Type Evaluation",
-    "type": "page"
-  },
-  "type-operators": {
-    "title": "Type Operators",
-    "type": "page"
-  },
-  "type-utilities": {
-    "title": "Type Utilities",
-    "type": "page"
-  },
-  "api-reference": {
-    "title": "API Reference",
-    "type": "page"
-  }
+  "title": "Documentation",
+  "pages": [
+    "---Getting Started---",
+    "index",
+    "installation",
+    "what-is-typemap",
+    "why-runtime-types",
+    "---Core Operators---",
+    "eval-typing",
+    "member",
+    "attrs",
+    "iter",
+    "newprotocol",
+    "updateclass",
+    "isassignable",
+    "isequivalent",
+    "---Type Utilities---",
+    "pick",
+    "omit",
+    "partial",
+    "deeppartial",
+    "required",
+    "keyof",
+    "template",
+    "---Advanced---",
+    "tutorial",
+    "examples",
+    "faq",
+    "api-reference"
+  ]
 }
