@@ -418,6 +418,24 @@ class Omit[T, K]:
     pass
 
 
+class AdjustLink[Tgt, LinkTy]:
+    """Wrap type in list if LinkTy is MultiLink, otherwise return as-is.
+
+    Used for ORM-style relations where:
+    - Link (one-to-one) -> returns Tgt directly
+    - MultiLink (one-to-many) -> returns list[Tgt]
+
+    Usage:
+        type UserPosts = AdjustLink[Post, MultiLink[Post]]
+        # Returns: list[Post]
+
+        type UserProfile = AdjustLink[Profile, Link[Profile]]
+        # Returns: Profile
+    """
+
+    pass
+
+
 ##################################################################
 
 # TODO: type better
