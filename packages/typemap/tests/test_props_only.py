@@ -97,9 +97,8 @@ def test_propsonly_all_relations():
         posts: MultiLink[Post]
         profile: Link[Profile]
 
-    result = eval_typing(typing.PropsOnly[AllRelations])
-
-    # Should have no properties
+    # Should have no properties - result returned as-is
+    eval_typing(typing.PropsOnly[AllRelations])
     # (result is returned as-is since there are no Property fields)
 
 
