@@ -46,3 +46,17 @@ See [`packages/typemap/README.md`](packages/typemap/README.md) for detailed usag
 
 - Python 3.14+
 - typing_extensions >= 4.0
+
+---
+
+## About This Project
+
+> **This project is 100% inspired by [vercel/python-typemap](https://github.com/vercel/python-typemap). All the credit and work goes to them - they are the real creators of this implementation.**
+
+This repository is simply a **packaged version** of the original work by Vercel. The goal is to make this PEP 827 implementation available on PyPI for easier installation and distribution.
+
+**All the intellectual work, research, and implementation was done by the Vercel team.** They are the ones who wrote the PEP draft, created the prototype, and demonstrated what's possible with type manipulation in Python.
+
+We hope with all our hearts that [PEP 827](https://peps.python.org/pep-0827/) will be accepted. This PEP represents a major step forward for Python's type system and would enable powerful type-level computations that are currently only possible in TypeScript.
+
+If you appreciate this work, please star and support the original [vercel/python-typemap](https://github.com/vercel/python-typemap) repository!
