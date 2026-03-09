@@ -1509,11 +1509,11 @@ def _eval_PropsOnly(tp, *, ctx):
 
         if origin is not None:
             # Check if origin is Property or a subclass of Pointer but not Link
-            origin_name = getattr(origin, '__name__', '')
+            origin_name = getattr(origin, "__name__", "")
 
             # Include if it's a Property (not a Link or MultiLink)
-            if 'Property' in origin_name or (
-                hasattr(origin, '__mro__')
+            if "Property" in origin_name or (
+                hasattr(origin, "__mro__")
                 and Pointer in origin.__mro__
                 and Link not in origin.__mro__
             ):
@@ -1553,11 +1553,7 @@ def _eval_ConvertField(tp, key, *, ctx):
     key = _eval_types(key, ctx)
 
     # Get the key name (should be a Literal)
-    key_name = (
-        get_args(key)[0]
-        if hasattr(key, "__args__")
-        else key
-    )
+    key_name = get_args(key)[0] if hasattr(key, "__args__") else key
 
     # Get the field type using GetMemberType
     field_type = _eval_types(GetMemberType[tp, Literal[key_name]], ctx)
@@ -1580,7 +1576,7 @@ def _eval_ConvertField(tp, key, *, ctx):
     is_link = False
     is_multilink = False
 
-    if hasattr(origin, '__mro__'):
+    if hasattr(origin, "__mro__"):
         if Link in origin.__mro__:
             is_link = True
             if MultiLink in origin.__mro__:
@@ -1604,16 +1600,19 @@ def _eval_ConvertField(tp, key, *, ctx):
 # Base classes for Link type detection
 class Pointer[T]:
     """Base class for pointer types (Property, Link, MultiLink)."""
+
     pass
 
 
 class Link(Pointer):
     """Base class for linked types (one-to-one or one-to-many)."""
+
     pass
 
 
 class MultiLink(Link):
     """Base class for multi-link types (one-to-many relationships)."""
+
     pass
 
 
