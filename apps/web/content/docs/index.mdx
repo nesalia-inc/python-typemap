@@ -1,0 +1,49 @@
+---
+title: Introduction
+description: PEP 827 type manipulation library for Python 3.14+
+---
+
+## What is typemap?
+
+**typemap** is a runtime type evaluation library for Python 3.14+ that implements the type manipulation operators from [PEP 827](https://peps.python.org/pep-0827/).
+
+This project is a packaged version of the original [vercel/python-typemap](https://github.com/vercel/python-typemap) implementation, distributed via PyPI for easy installation.
+
+## Installation
+
+```bash
+pip install typemap
+```
+
+## Quick Start
+
+```python
+from typemap import eval_typing
+import typemap_extensions as tm
+
+class User:
+    name: str
+    age: int
+
+# Evaluate a type at runtime
+result = eval_typing(tm.KeyOf[User])
+print(result)  # tuple[Literal["name"], Literal["age"]]
+```
+
+## Core Features
+
+<Cards>
+  <Card title="Type Evaluation" href="/docs/type-evaluation" description="Evaluate types at runtime" />
+  <Card title="Type Operators" href="/docs/type-operators" description="Member, Attrs, Iter, and more" />
+  <Card title="Type Utilities" href="/docs/type-utilities" description="Pick, Omit, Partial, and more" />
+  <Card title="API Reference" href="/docs/api-reference" description="Full API documentation" />
+</Cards>
+
+## Requirements
+
+- Python 3.14+
+- typing_extensions >= 4.0
+
+## Credits
+
+This project is 100% inspired by [vercel/python-typemap](https://github.com/vercel/python-typemap). All credit goes to them!

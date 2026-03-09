@@ -1,0 +1,64 @@
+---
+title: Type Evaluation
+description: Evaluate type expressions at runtime
+---
+
+## eval_typing
+
+The `eval_typing` function evaluates type expressions at runtime and returns the resolved type.
+
+```python
+from typemap import eval_typing
+import typemap_extensions as tm
+
+class User:
+    name: str
+    age: int
+    email: str
+
+# Evaluate KeyOf to get all member names
+result = eval_typing(tm.KeyOf[User])
+# Returns: tuple[Literal["name"], Literal["age"], Literal["email"]]
+```
+
+## How It Works
+
+typemap uses Python's `typing` module introspection capabilities to evaluate type expressions. It supports:
+
+- **Type aliases** - Resolve type alias expressions
+- **Generic types** - Evaluate parameterized generic types
+- **Type operators** - Apply transformations like `KeyOf`, `Partial`, etc.
+- **Special forms** - Handle `IsAssignable`, `Iter`, and other special forms
+
+## Basic Usage
+
+```python
+from typemap import eval_typing
+from typing import Literal
+
+# Evaluate a simple class
+class MyClass:
+    x: int
+    y: str
+
+result = eval_typing(MyClass)
+# Returns the class itself
+
+# Evaluate with type operators
+PartialMyClass = eval_typing(tm.Partial[MyClass])
+# Returns a new class with optional fields: x: int | None, y: str | None
+```
+
+## Error Handling
+
+When type evaluation encounters an error, it raises `TypeMapError`:
+
+```python
+from typemap import eval_typing
+from typemap.type_eval import TypeMapError
+
+try:
+    result = eval_typing(some_invalid_type)
+except TypeMapError as e:
+    print(f"Type error: {e}")
+```
