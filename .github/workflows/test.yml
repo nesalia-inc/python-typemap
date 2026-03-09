@@ -24,6 +24,7 @@ jobs:
 
       - name: Run tests with coverage
         working-directory: packages/typemap
+        # test_cqa.py runs ruff/mypy on project itself, causes circular issues in CI
         run: uv run pytest --ignore=tests/test_cqa.py --cov=src --cov-report=xml --cov-report=term-missing
 
       - name: Upload coverage to Codecov
