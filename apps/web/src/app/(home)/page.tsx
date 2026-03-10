@@ -15,9 +15,9 @@ export default function HomePage() {
 
   return (
     <section>
-      <div className="grid grid-cols-10 lg:grid-cols-2">
+      <div className="grid grid-cols-10 lg:grid-cols-2 flex-1">
         {/* Left column - content */}
-        <div className="col-span-9 flex h-screen flex-col justify-between p-6 lg:col-span-1">
+        <div className="col-span-9 flex flex-1 flex-col justify-center p-6 lg:col-span-1">
 
           {/* Hero section */}
           <div className="flex flex-col gap-6 md:gap-8">
@@ -64,7 +64,7 @@ export default function HomePage() {
         </div>
 
         {/* Right column - visual */}
-        <div className="col-span-1 h-screen min-h-0 overflow-hidden lg:block hidden border-l border-border/25">
+        <div className="col-span-1 flex-1 min-h-0 overflow-hidden lg:block hidden border-l border-border/25">
           {/* EtheralShadow placeholder - gradient animation */}
           <div className="w-full h-full bg-gradient-to-br from-background via-accent/10 to-background animate-pulse" />
         </div>
