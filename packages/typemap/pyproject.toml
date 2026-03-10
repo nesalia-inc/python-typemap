@@ -6,6 +6,15 @@ requires-python = ">=3.14"
 dependencies = [
     "typing_extensions>=4.0",
 ]
+readme = "README.md"
+authors = [
+    { name = "Nesalia Inc.", email = "support@nesalia.com" },
+]
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.14",
+    "Operating System :: OS Independent",
+]
 
 [dependency-groups]
 dev = [
