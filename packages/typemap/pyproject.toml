@@ -81,3 +81,16 @@ exclude_lines = [
 ]
 precision = 2
 show_missing = true
+
+[tool.mypy]
+python_version = "3.14"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+warn_unused_ignores = true
+strict_optional = true
+no_implicit_optional = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+ignore_errors = true

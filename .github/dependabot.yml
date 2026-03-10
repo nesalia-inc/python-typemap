@@ -4,9 +4,25 @@
 version: 2
 
 updates:
-  # Enable version updates for npm
+  # Enable version updates for Python
   - package-ecosystem: "pip"
     directory: "/packages/typemap"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "security"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+
+  # Enable version updates for npm
+  - package-ecosystem: "npm"
+    directory: "/apps/web"
     schedule:
       interval: "weekly"
       day: "monday"
