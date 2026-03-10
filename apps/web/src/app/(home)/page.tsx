@@ -14,7 +14,7 @@ export default function HomePage() {
   };
 
   return (
-    <section>
+    <section className="flex flex-1">
       <div className="grid grid-cols-10 lg:grid-cols-2 flex-1">
         {/* Left column - content */}
         <div className="col-span-9 flex flex-1 flex-col justify-between p-6 lg:col-span-1">
