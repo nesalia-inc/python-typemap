@@ -17,13 +17,18 @@ export default function HomePage() {
     <section>
       <div className="grid grid-cols-10 lg:grid-cols-2">
         {/* Left column - content */}
-        <div className="col-span-9 flex h-screen flex-col justify-between p-6 lg:col-span-1">
+        <div className="col-span-9 flex h-screen flex-col justify-center p-6 lg:col-span-1">
 
-          {/* Middle section - hero */}
+          {/* Hero section */}
           <div className="flex flex-col gap-6 md:gap-8">
             <h3 className="text-5xl font-medium leading-tight md:max-w-lg md:text-6xl">
               Runtime type manipulation for Python
             </h3>
+
+            <p className="text-muted-foreground max-w-md">
+              Evaluate, transform, and introspect types at runtime.
+              Inspired by TypeScript.
+            </p>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <Link
@@ -49,16 +54,6 @@ export default function HomePage() {
                   )}
                 </button>
               </div>
-            </div>
-          </div>
-
-          {/* Bottom section - install and info */}
-          <div className="flex flex-col gap-4">
-            <div className="flex max-w-md flex-col gap-2 text-xs md:text-sm">
-              <p className="text-muted-foreground">PEP 827 type manipulation library</p>
-              <p className="text-xs text-muted-foreground">
-                Evaluate, transform, and introspect types at runtime. Inspired by TypeScript.
-              </p>
             </div>
           </div>
         </div>
