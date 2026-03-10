@@ -17,10 +17,10 @@ export default function HomePage() {
     <section className="flex flex-1">
       <div className="grid grid-cols-10 lg:grid-cols-2 flex-1">
         {/* Left column - content */}
-        <div className="col-span-9 flex flex-1 flex-col justify-between p-6 lg:col-span-1">
+        <div className="col-span-9 flex flex-1 flex-col p-6 lg:col-span-1">
 
-          {/* Hero section */}
-          <div className="flex flex-col gap-6 md:gap-8">
+          {/* Hero section - centered */}
+          <div className="flex flex-1 flex-col justify-center gap-6 md:gap-8">
             <h3 className="text-5xl font-medium leading-tight md:max-w-lg md:text-6xl">
               Runtime type manipulation for Python
             </h3>
