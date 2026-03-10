@@ -104,46 +104,7 @@ export function CodeShowcase() {
     const highlight = async () => {
       const html = await codeToHtml(examples[current].code, {
         lang: "python",
-        theme: {
-          name: "github-dark-custom",
-          type: "dark",
-          foreground: "transparent",
-          background: "transparent",
-          settings: [
-            {
-              scope: "comment",
-              settings: { foreground: "#8b949e", fontStyle: "italic" },
-            },
-            {
-              scope: "keyword",
-              settings: { foreground: "#ff7b72" },
-            },
-            {
-              scope: "string",
-              settings: { foreground: "#a5d6ff" },
-            },
-            {
-              scope: "number",
-              settings: { foreground: "#79c0ff" },
-            },
-            {
-              scope: "type",
-              settings: { foreground: "#ffa657" },
-            },
-            {
-              scope: "function",
-              settings: { foreground: "#d2a8ff" },
-            },
-            {
-              scope: "variable",
-              settings: { foreground: "#ffa657" },
-            },
-            {
-              scope: "constant",
-              settings: { foreground: "#79c0ff" },
-            },
-          ],
-        },
+        theme: "github-dark",
       });
       setHighlightedCode(html);
     };
@@ -168,7 +129,7 @@ export function CodeShowcase() {
       {/* Code block */}
       <div className="flex-1 overflow-auto bg-background p-4 text-sm">
         <pre
-          className="min-h-full bg-background [&>pre]:!bg-transparent"
+          className="min-h-full bg-background [&_pre]:!bg-transparent"
           dangerouslySetInnerHTML={{ __html: highlightedCode }}
         />
       </div>
@@ -201,16 +162,16 @@ export function CodeShowcase() {
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-              variant="outline"
-              size="icon"
-              onClick={next}
-              className="h-8 w-8 border-zinc-700 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="top">Next example</TooltipContent>
-        </Tooltip>
+                variant="outline"
+                size="icon"
+                onClick={next}
+                className="h-8 w-8 border-zinc-700 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">Next example</TooltipContent>
+          </Tooltip>
         </div>
       </div>
     </div>
