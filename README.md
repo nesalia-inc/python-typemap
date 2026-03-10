@@ -21,22 +21,23 @@ This repository contains the **typemap** package, which provides utilities for w
 
 ### Features
 
-- **`eval_typing`** - Evaluate type expressions at runtime
-- **Type operators** via `typemap_extensions`:
-  - `Member` - Access type members by name
-  - `Attrs` - Get class attributes
-  - `Iter` - Iterate over type contents
-  - `Param` - Define callable parameters
-  - `UpdateClass` - Generate class modifications
-  - `NewProtocol` - Create protocols dynamically
-  - `IsAssignable` - Check type assignability
-  - `KeyOf` - Get all member names as tuple of Literals
-  - `Template` - Build template literal strings
-  - `DeepPartial` - Make all fields recursively optional
-  - `Partial` - Make all fields optional (non-recursive)
-  - `Required` - Remove Optional from all fields
-  - `Pick` - Pick specific fields from a type
-  - `Omit` - Omit specific fields from a type
+| Operator | Description |
+|----------|-------------|
+| `eval_typing` | Evaluate type expressions at runtime |
+| `Member` | Access type members by name |
+| `Attrs` | Get class attributes |
+| `Iter` | Iterate over type contents |
+| `Param` | Define callable parameters |
+| `UpdateClass` | Generate class modifications |
+| `NewProtocol` | Create protocols dynamically |
+| `IsAssignable` | Check type assignability |
+| `KeyOf` | Get all member names as tuple of Literals |
+| `Template` | Build template literal strings |
+| `DeepPartial` | Make all fields recursively optional |
+| `Partial` | Make all fields optional (non-recursive) |
+| `Required` | Remove Optional from all fields |
+| `Pick` | Pick specific fields from a type |
+| `Omit` | Omit specific fields from a type |
 
 ## Documentation
 
