@@ -3,8 +3,6 @@
 [![PyPI Version](https://img.shields.io/pypi/v/typemap)](https://pypi.org/project/typemap/)
 [![Python Version](https://img.shields.io/python/py-version/typemap)](https://pypi.org/project/typemap/)
 [![Test Status](https://github.com/nesalia-inc/python-typemap/actions/workflows/test.yml/badge.svg)](https://github.com/nesalia-inc/python-typemap/actions)
-[![Codecov](https://codecov.io/gh/nesalia-inc/python-typemap/branch/main/graph/badge.svg)](https://codecov.io/gh/nesalia-inc/python-typemap)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 PEP 827 type manipulation library for Python 3.14+
